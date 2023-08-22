@@ -1,4 +1,4 @@
 # auth.svelte
-Svelte package to deal with Object Reef OAuth 2 Identity Provider
+Svelte front-end package for authorization using Object Reef Identity Provider
 
-docs will be performed in the near future
+A detailed tutorial will be included in the near future
