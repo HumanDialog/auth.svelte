@@ -179,7 +179,7 @@
                 if($session.signin(tokens))
                     return state;
                 else
-                    return "/auth/err?desc=Something+wrong+with+tokens.";
+                    return "/#/auth/err?desc=Something+wrong+with+tokens.";
             }
             else
             {
@@ -188,14 +188,14 @@
                 if(msg == "")
                     msg = (!!result.error) ? result.error : "";
 
-                return "/auth/err?desc=" + encodeURIComponent(msg);
+                return "/#/auth/err?desc=" + encodeURIComponent(msg);
 
             }
         }
         catch (error)
         {
             console.log("Error: ", error);
-            return "/auth/err?desc=" + encodeURIComponent(error.toString());
+            return "/#/auth/err?desc=" + encodeURIComponent(error.toString());
         }
     }
 

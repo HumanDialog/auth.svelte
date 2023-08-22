@@ -1,7 +1,7 @@
 {
-  "name": "auth.svelte",
+  "name": "@humandialog/auth.svelte",
   "version": "1.0.0",
-  "description": "",
+  "description": "Svelte package to deal with Object Reef OAuth 2 Identity Provider",
   "svelte": "src/index.ts",
   "module": "dist/index.mjs",
   "main": "dist/index.umd.js",
@@ -20,8 +20,8 @@
   "keywords": [
     "svelte"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Human Dialog",
+  "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^9.0.0",
     "@rollup/plugin-typescript": "^6.0.0",
@@ -38,5 +38,13 @@
     "svelte-preprocess": "^4.5.1",
     "tslib": "^2.0.3",
     "typescript": "^4.0.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HumanDialog/auth.svelte.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HumanDialog/auth.svelte/issues"
+  },
+  "homepage": "https://github.com/HumanDialog/auth.svelte#readme"
 }
