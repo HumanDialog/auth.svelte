@@ -1,5 +1,10 @@
 # @humandialog/auth.svelte
 
+<h1 style="font-size: 64px">
+<img src="https://objectreef.dev/reef.png" alt="ObjectReef logo" width="90">
+ObjectReef&reg;
+</h1>
+
 Svelte package to support Object Reef Identity Provider.\
 Object Reef Identity Provider is available at https://objectreef.io/auth and it's OIDC compliant 
 authorization service available for developers who create applications using [Object Reef](https://objectreef.dev)
