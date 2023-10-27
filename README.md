@@ -18,9 +18,9 @@ To install the package on your Svelte project type:\
 ### Configuration
 ```js
     // App.svelte
-    import {session} from '@humandialog/auth.svelte'
+    import {reef} from '@humandialog/auth.svelte'
 
-    $session.configure( 
+    reef.configure( 
             {
               mode: 'remote', // possible: 'remote', 'local', 'disabled'
               remote: {
@@ -38,7 +38,7 @@ To install the package on your Svelte project type:\
               }
             })
 ```
-In application root file ***App.svelte*** set up the `$session` variable by passing
+In application root file ***App.svelte*** set up the the Object Reef SDK with `reef.configure` by passing
 a configuration object. Authorization can be switched between `'remote'` and `'local'` or it can be `'disabled'` at all. The `'remote'` is the most common mode when your website is already published and registered in the Object Reef Auth.
 
 The `'local'` mode can be useful during the local developement when you need request API in context of specified user. The list of such users needs to be provided as `users` array in configuration object. In this mode, the website asks current active user instead of redirecting the browser to sign-in page.
@@ -81,8 +81,49 @@ The `NotAuthorized` encapsulate content which should be visible only when user h
         <a href={$signin_href}>Sign in</a>
     </NotAuthorized>
 ```
-### `Auth.fetch` function
-The `Auth.fetch` wraps original `fetch` function support authorization stuff. It will:
+
+### `reef.get` function
+The `reef.get` makes HTTP GET request to the service and returns JavaScript object as a result. It will:
+ - adds API version specified in `reef.configure`
+ - adds `Authorization` header to each request with issued access token
+ - refreshes access token when expired
+ - concatenates tenant proper DNS address issued during authorization.
+ - the request result is converted from JSON to JavaSctipt object
+
+##### Example:
+```js
+    let res = await reef.get("app/Lists/count");
+```
+
+### `reef.post` function
+The `reef.post` makes HTTP POST request to the service and returns JavaScript object as a result. It will:
+ - adds API version specified in `reef.configure`
+ - adds `Authorization` header to each request with issued access token
+ - refreshes access token when expired
+ - concatenates tenant proper DNS address issued during authorization.
+ - passed body parameter should be a JavaScript object
+ - the request result is converted from JSON to JavaSctipt object
+
+##### Example:
+```js
+    let res = await reef.post("app/Lists/new", { Name: 'My List Name' });
+```
+
+### `reef.delete` function
+The `reef.delete` makes HTTP DELETE request to the service. It will:
+ - adds API version specified in `reef.configure`
+ - adds `Authorization` header to each request with issued access token
+ - refreshes access token when expired
+ - concatenates tenant proper DNS address issued during authorization.
+ 
+##### Example:
+```js
+    let res = await reef.delete("app/Lists/last");
+```
+
+### `reef.fetch` function
+The `reef.fetch` is more general operation comparing to `reef.get` or `reef.post`.
+It wraps original `fetch` function with authorization support stuff. It will:
  - add `Authorization` header to each request with issued access token
  - refreshes access token when expired
  - concatenates tenant proper DNS address issued during authorization.
@@ -92,7 +133,7 @@ The `Auth.fetch` wraps original `fetch` function support authorization stuff. It
 
  ##### Example:
 ```js
-    let res = await Auth.fetch("/json/yav1/app/Lists/new",
+    let res = await reef.fetch("/json/yav1/app/Lists/new",
                                 {
                                     method:'POST',
                                     body: JSON.stringify({Name: list_name})

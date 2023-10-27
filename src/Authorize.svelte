@@ -1,7 +1,7 @@
 <script lang="ts">
     import { session } from "./Session";
     import {gv} from "./Global_variables"
-    import {Auth, _hd_auth_location, _hd_auth_querystring} from "./Auth"
+    import {reef, _hd_auth_location, _hd_auth_querystring} from "./Auth"
     import type { Configuration } from "./Configuration";
     
     //export let params = {}
@@ -52,7 +52,7 @@
                 }
                 else
                 {
-                    let session_refreshed_successfully :boolean = await Auth.refresh_tokens();
+                    let session_refreshed_successfully :boolean = await reef.refresh_tokens();
                     if(session_refreshed_successfully)
                         window.location.href = redirect;
                     else

@@ -29,7 +29,7 @@ export class Session
         
     }
 
-    public configure(cfg)
+    public configure(cfg, internal=false)
     {
         this.configuration = new Configuration;
 
@@ -43,17 +43,20 @@ export class Session
                 this.configuration.client_id        = cfg.remote.client_id;
                 this.configuration.client_secret    = cfg.remote.client_secret;
                 this.configuration.scope            = cfg.remote.scope;
+                this.configuration.api_version      = cfg.remote.api_version ?? "yav1";
                 break;
 
             case 'local':
                 this.configuration.mode         = Mode.Local;
                 this.configuration.local_api    = cfg.local.api;
                 this.configuration.local_users  = [...cfg.local.users];
+                this.configuration.api_version  = cfg.local.api_version ?? "yav1";
                 break;
 
             case 'disabled':
                 this.configuration.mode         = Mode.Disabled;
                 this.configuration.local_api    = cfg.local.api;
+                this.configuration.api_version  = cfg.local.api_version ?? "yav1";
                 break;
             }
         }
@@ -63,6 +66,18 @@ export class Session
         }
 
         this.setup_mode(this.configuration.mode);
+
+        if(!internal)
+        {
+            gv.set('_hd_auth_cfg', JSON.stringify(cfg))
+
+            if(this.is_valid)  
+                this.boost_validation_ticket();
+            
+            let new_session :Session = new Session();
+            new_session.clone_from(this);
+            session.set(new_session);       // forces store subscribers
+        }
     }
 
     private clone_from(src :Session)
@@ -150,6 +165,23 @@ export class Session
         {
             this.my_validation_ticket = 1;
             gv.set_num("_hd_auth_session_validation_ticket", this.my_validation_ticket);
+        }
+
+        if(!this.configuration)
+        {
+            let cfg_json;
+            if(gv.get('_hd_auth_cfg', (v) => cfg_json = v))
+            {
+                try
+                {
+                    let cfg = JSON.parse(cfg_json);
+                    this.configure(cfg, true);
+                }
+                catch(err)
+                {
+                    console.error(err);
+                }
+            }
         }
 
         if(this.disabled)
@@ -390,7 +422,7 @@ export class Session
         return (this.mode == Mode.Disabled);
     }
 
-    public setup_mode(m :Mode)
+    protected setup_mode(m :Mode)
     {
         let was_remote :boolean = this.mode == Mode.Remote;
         
@@ -418,20 +450,6 @@ export class Session
                 //this.set_current_tenant_api(this.configuration.local_api, '')
             }
         }
-        
-        
-        if(this.is_valid)   // invalidate if needed
-        {
-            let validation_ticket :number = 0;
-            gv.get_num("_hd_auth_session_validation_ticket", (v) => {validation_ticket = v;});
-            validation_ticket++;
-            gv.set_num("_hd_auth_session_validation_ticket", validation_ticket);
-        }
-        
-        let new_session :Session = new Session();
-        new_session.clone_from(this);
-        session.set(new_session);       // forces store subscribers
-        
     }
 
     public set_local_dev_current_user(email :string)

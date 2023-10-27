@@ -2,8 +2,14 @@ import { session, Session } from "./Session";
 import type { Configuration } from "./Configuration";
 import { derived, readable, get } from "svelte/store";
 
-export class Auth
+export class reef
 {
+    public static configure(cfg)
+    {
+        let _session :Session = get(session);
+        _session.configure(cfg);
+    }
+
     public static async fetch(...args)
     {
         let [resource, options] = args;
@@ -61,6 +67,98 @@ export class Auth
         }
 
         return fetch(resource, options);
+    }
+
+    private static correct_path_with_api_version_if_needed(path)
+    {
+        if(path.startsWith('/json/'))
+            return path;
+
+        let apiver = 'yav1';    // default
+        let _session :Session = get(session);
+        if(_session && _session.configuration && _session.configuration.api_version)
+            apiver = _session.configuration.api_version;
+
+        if(path.startsWith('/'))
+            return `/json/${apiver}${path}`;
+        else
+            return `/json/${apiver}/${path}`;
+    }
+
+    public static async get(_path)
+    {
+        let path = reef.correct_path_with_api_version_if_needed(_path)
+
+        try
+        {
+            let res = await reef.fetch(path)
+            if(res.ok)
+            {
+                const response_string = await res.text();
+                if(!response_string)
+                    return {}
+                else
+                    return JSON.parse(response_string);
+            }
+            else
+                return null;
+        }
+        catch(err)
+        {
+            console.error(err);
+            return null;
+        }
+    }
+
+    public static async post(_path, request_object)
+    {
+        let path = reef.correct_path_with_api_version_if_needed(_path)
+
+        try
+        {
+            let res = await reef.fetch(path, {
+                                    method: 'POST',
+                                    body: JSON.stringify(request_object)})
+            if(res.ok)
+            {
+                const response_string = await res.text();
+                if(!response_string)
+                    return {}
+                else
+                    return JSON.parse(response_string);
+            }
+            else
+                return null;
+        }
+        catch(err)
+        {
+            console.error(err);
+            return null;
+        }
+    }
+
+    public static async delete(_path)
+    {
+        let path = reef.correct_path_with_api_version_if_needed(_path)
+        try
+        {
+            let res = await reef.fetch(path, { method: 'DELETE'} );
+            if(res.ok)
+            {
+                const response_string = await res.text();
+                if(!response_string)
+                    return {}
+                else
+                    return JSON.parse(response_string);
+            }
+            else
+                return null;
+        }
+        catch(err)
+        {
+            console.error(err);
+            return null;
+        }
     }
 
     public static async refresh_tokens() :Promise<boolean>
