@@ -1,0 +1,7 @@
+za każdym razem kiedy zmiana w tym repozytirum będzie miała być zsychnronizowana z publicznym repo należy:
+1. zrobić sync z repo na https://github.com/HumanDialog/auth.svelte
+    
+2. na folderze podpiętym do repo hithubowego zawołać:
+    npm login
+    npm publish --access=public
+    2.1 obie te komendy wymagają kodu z 2FA
