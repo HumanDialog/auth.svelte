@@ -3,34 +3,38 @@
     import {_hd_auth_location, _hd_auth_querystring} from './Auth'
     import Authorize from "./Authorize.svelte";
     import LocalAuthorize from "./LocalAuthorize.svelte"
+    import ChooseTenant from "./ChooseTenant.svelte";
 
     export let   isDisabled   :boolean = false;
     export let   autoRedirectToSignIn :boolean = true;
 
-    let launch_authorize :boolean = false;
-    let launch_local_authorize :boolean = false;
+    const WAITING = 0;
+    const CHOOSE_LOCAL_USER = 1;
+    const AUTHORIZE = 2;
+    const CHOOSE_TENANT = 3;
+
+    let what_to_show :number = WAITING;
 
     function initialize(is_disabled :boolean, location :string)
     {
-        launch_authorize = false;
-        //console.log("AuthorizedView: ", location);
-
         if(location.startsWith('/auth-local'))
         {
-            launch_authorize = false;
-            launch_local_authorize = true;
+            what_to_show = CHOOSE_LOCAL_USER;
+            return;
+        }
+        else if(location.startsWith('/auth/choose-tenant'))
+        {
+            what_to_show = CHOOSE_TENANT;
             return;
         }
         else if(location.startsWith('/auth'))
         {
-            launch_authorize = true;
-            launch_local_authorize = false;
+            what_to_show = AUTHORIZE;
             return;
         }
         else
         {
-            launch_authorize = false;
-            launch_local_authorize = false;
+            what_to_show = WAITING;
         }
 
         //if(is_disabled)
@@ -54,10 +58,12 @@
     
 </script>
 
-{#if launch_authorize}
+{#if what_to_show == AUTHORIZE}
     <Authorize/>
-{:else if launch_local_authorize}
+{:else if what_to_show == CHOOSE_LOCAL_USER}
     <LocalAuthorize/>
+{:else if what_to_show == CHOOSE_TENANT}
+    <ChooseTenant/>
 {:else if $session.is_valid}
     <slot/>
 {:else}

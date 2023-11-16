@@ -219,21 +219,19 @@ export class reef
         }
     }
 
-    /* see signin_href signout_href stores instead
-    public static get signin_href() :string
+    public static location_changed(...args)
     {
-        return "/#/auth/signin?redirect=" + encodeURIComponent(window.location.href);
+        if(get(loc).href != window.location.href)
+        {
+            let event = new PopStateEvent('popstate', { state: {} });
+            dispatchEvent(event);
+        }
     }
-
-    public static get signout_href() :string
-    {
-        return "/#/auth/signout?redirect=" + encodeURIComponent(window.location.href);
-    }
-    */
 }
 
 function get_location()
 {
+    //console.log('auth update:', window.location.href)
     const href = window.location.href;
     const hashPosition = href.indexOf('#/')
     let location = (hashPosition > -1) ? href.substr(hashPosition + 1) : '/'
@@ -253,10 +251,14 @@ const loc = readable(
     {
         set(get_location())
         const update = () => { set(get_location()) }
-        window.addEventListener('hashchange', update, false);
+        
+        window.addEventListener('hashchange', update, false);       // hash based routers
+        window.addEventListener('popstate', (event) => {update();});         // history based routers
+
         return function stop()
         {
             window.removeEventListener('hashchange', update, false);
+            window.removeEventListener('popstate', (event) => {update();});
         }
     }
 )
