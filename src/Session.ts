@@ -245,7 +245,7 @@ export class Session
             this._is_active = true;
     }
 
-    public signin(tokens_info) :boolean
+    public signin(tokens_info, chosen_tenant_id = undefined) :boolean
     {
         if((tokens_info.access_token == undefined) || (tokens_info.access_token == ""))
         {
@@ -276,7 +276,18 @@ export class Session
             if(tokens_info.tenants.length == 1)
                 this.set_current_tenant_api(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
             else
-                this.set_current_tenant_api(tokens_info.tenants[0].url, tokens_info.tenants[0].id);         // todo: choose active tenant
+            {
+                if(chosen_tenant_id)
+                {
+                    const chosen_tenant = tokens_info.tenants.find( el => el.id == chosen_tenant_id)
+                    if(chosen_tenant)
+                        this.set_current_tenant_api(chosen_tenant.url, chosen_tenant.id);
+                    else
+                        this.set_current_tenant_api(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+                }
+                else
+                    this.set_current_tenant_api(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+            }
         }
         else if((tokens_info.apps != undefined) && (tokens_info.apps.length > 0))
         {

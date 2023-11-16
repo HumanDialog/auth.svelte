@@ -3,6 +3,7 @@
     import {gv} from "./Global_variables"
     import {reef, _hd_auth_location, _hd_auth_querystring} from "./Auth"
     import type { Configuration } from "./Configuration";
+    import {Internals} from './internals'
     
     //export let params = {}
 
@@ -176,6 +177,14 @@
             if(res.ok)
             {
                 let tokens = await res.json();
+
+                // user needs to choose the tenant
+                if(tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1)
+                {
+                    Internals.obtained_tokens_info = tokens;
+                    return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
+                }
+
                 if($session.signin(tokens))
                     return state;
                 else
