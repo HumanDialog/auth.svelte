@@ -5,9 +5,9 @@
 ObjectReef&reg;
 </h1>
 
-Svelte package to support Object Reef Identity Provider.\
-Object Reef Identity Provider is available at https://objectreef.io/auth and it's OIDC compliant 
-authorization service available for developers who create applications using [Object Reef](https://objectreef.dev)
+Svelte package to support ObjectReef Identity Provider.\
+ObjectReef Identity Provider is available at https://objectreef.io/auth and it's OIDC compliant 
+authorization service available for developers who create applications using [ObjectReef](https://objectreef.dev)
 
 ## Installing
 To install the package on your Svelte project type:\
@@ -38,8 +38,8 @@ To install the package on your Svelte project type:\
               }
             })
 ```
-In application root file ***App.svelte*** set up the the Object Reef SDK with `reef.configure` by passing
-a configuration object. Authorization can be switched between `'remote'` and `'local'` or it can be `'disabled'` at all. The `'remote'` is the most common mode when your website is already published and registered in the Object Reef Auth.
+In application root file ***App.svelte*** set up the the ObjectReef SDK with `reef.configure` by passing
+a configuration object. Authorization can be switched between `'remote'` and `'local'` or it can be `'disabled'` at all. The `'remote'` is the most common mode when your website is already published and registered in the ObjectReef Auth.
 
 The `'local'` mode can be useful during the local developement when you need request API in context of specified user. The list of such users needs to be provided as `users` array in configuration object. In this mode, the website asks current active user instead of redirecting the browser to sign-in page.
 
@@ -129,7 +129,7 @@ It wraps original `fetch` function with authorization support stuff. It will:
  - concatenates tenant proper DNS address issued during authorization.
 
  > **_NOTE:_**\
- Object Reef multitenancy support assumes every tenant API is available at different DNS address like `tenant_qwerty.objectreef.io`. It means the proper API depends on which workspace authenticated user belongs to.
+ ObjectReef multitenancy support assumes every tenant API is available at different DNS address like `tenant_qwerty.objectreef.io`. It means the proper API depends on which workspace authenticated user belongs to.
 
  ##### Example:
 ```js

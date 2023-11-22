@@ -234,6 +234,7 @@ function get_location()
     //console.log('auth update:', window.location.href)
     const href = window.location.href;
     const hashPosition = href.indexOf('#/')
+    let base_address = window.location.pathname;
     let location = (hashPosition > -1) ? href.substr(hashPosition + 1) : '/'
     // Check if there's a querystring
     const qsPosition = location.indexOf('?')
@@ -242,7 +243,7 @@ function get_location()
         querystring = location.substr(qsPosition + 1)
         location = location.substr(0, qsPosition)
     }
-    return {href, location, querystring}
+    return {href, location, querystring, base_address}
 }
 
 const loc = readable(
@@ -265,6 +266,7 @@ const loc = readable(
 
 export const _hd_auth_location = derived(loc, ($loc) => $loc.location);
 export const _hd_auth_querystring = derived(loc, ($loc) => $loc.querystring);
-export const signin_href = derived(loc, ($loc) => '/#/auth/signin?redirect=' + encodeURIComponent($loc.href));
-export const signout_href = derived(loc, ($loc) => '/#/auth/signout?redirect=' + encodeURIComponent($loc.href));
+export const _hd_auth_base_address = derived(loc, ($loc) => $loc.base_address);
+export const signin_href = derived(loc, ($loc) => '#/auth/signin?redirect=' + encodeURIComponent($loc.href));
+export const signout_href = derived(loc, ($loc) => '#/auth/signout?redirect=' + encodeURIComponent($loc.href));
 

@@ -46,9 +46,23 @@
             {
                 let current_path :string;
                 current_path = window.location.href;
+
+                //console.log('auth, location.pathname', window.location.pathname)
+                let navto :string = window.location.pathname;
+                if(!navto)
+                    navto = '/';
+
+                if(!navto.endsWith('/'))
+                    navto += '/';
+
+                navto += "#/auth/signin?redirect=" + encodeURIComponent(current_path);
+
+                //console.log('auth, navto', navto)
+                window.location.href = navto;
+
+                what_to_show = AUTHORIZE;
+
                 
-                let navto :string = "#/auth/signin?redirect=" + encodeURIComponent(current_path);
-                window.location.hash = navto;
             }
         }
     }
