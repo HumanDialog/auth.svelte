@@ -1,7 +1,7 @@
 <script lang="ts">
     import { session } from "./Session";
     import {gv} from "./Global_variables"
-    import {reef, _hd_auth_location, _hd_auth_querystring} from "./Auth"
+    import {reef, _hd_auth_location, _hd_auth_querystring, _hd_auth_base_address} from "./Auth"
     import type { Configuration } from "./Configuration";
     import {Internals} from './internals'
     
@@ -48,8 +48,15 @@
                     window.location.href = redirect;
                 else if($session.local)
                 {
-                    let navto :string = "#/auth-local?redirect=" + encodeURIComponent(redirect);
-                    window.location.hash = navto;
+                    let navto :string = window.location.pathname;
+                    if(!navto)
+                        navto = '/';
+
+                    if(!navto.endsWith('/'))
+                        navto += '/';
+
+                    navto += "#/auth-local?redirect=" + encodeURIComponent(redirect);
+                    window.location.href = navto;
                 }
                 else
                 {
@@ -80,7 +87,18 @@
             break;
 
         default:
-            window.location.hash = "#/auth/err?desc=Bad+request";
+            {
+                let navto :string = window.location.pathname;
+                if(!navto)
+                    navto = '/';
+
+                if(!navto.endsWith('/'))
+                    navto += '/';
+
+                navto += "#/auth/err?desc=Bad+request";
+                window.location.href = navto 
+            }
+            
             break;
         }
 
