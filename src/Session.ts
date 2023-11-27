@@ -349,7 +349,7 @@ export class Session
         session.set(new_session);       // forces store subscribers
     }
 
-    public async is_admin() :Promise<boolean>
+    public async __is_admin() :Promise<boolean>
     {
         if(!this.is_valid)
             this.validate();

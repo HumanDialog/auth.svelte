@@ -4,6 +4,7 @@
     import {reef, _hd_auth_location, _hd_auth_querystring, _hd_auth_base_address} from "./Auth"
     import type { Configuration } from "./Configuration";
     import {Internals} from './internals'
+    import { tick } from "svelte";
     
     //export let params = {}
 
@@ -45,7 +46,10 @@
                     redirect = "/";
 
                 if($session.disabled)
+                {
+                    await tick();
                     window.location.href = redirect;
+                }
                 else if($session.local)
                 {
                     let navto :string = window.location.pathname;
@@ -56,16 +60,22 @@
                         navto += '/';
 
                     navto += "#/auth-local?redirect=" + encodeURIComponent(redirect);
+                    await tick();
+
                     window.location.href = navto;
                 }
                 else
                 {
                     let session_refreshed_successfully :boolean = await reef.refresh_tokens();
                     if(session_refreshed_successfully)
+                    {
+                        await tick();
                         window.location.href = redirect;
+                    }
                     else
                     {
                         redirect_to = await generate_signin_redirection(redirect);
+                        await tick();
                         window.location.href = redirect_to;
                     }
                 }
@@ -74,11 +84,13 @@
 
         case "signout":
             $session.signout();
+            await tick();
             window.location.href = redirect;
             break;
 
         case "cb":
             redirect_to = await handle_authorization_callback();
+            await tick();
             window.location.href = redirect_to;
             break;
 
@@ -95,7 +107,11 @@
                 if(!navto.endsWith('/'))
                     navto += '/';
 
-                navto += "#/auth/err?desc=Bad+request";
+                navto += "#/auth/err?desc=Bad+request:+"    + encodeURIComponent(window.location.href) 
+                                                            + '+cmd:+'+encodeURIComponent(cmd)
+                                                            + '+location:+'+encodeURIComponent(location)
+                console.log('cmd:', cmd, 'location:', location)
+                await tick();
                 window.location.href = navto 
             }
             

@@ -3,6 +3,7 @@
     import {Internals} from "./internals"
     import {_hd_auth_location, _hd_auth_querystring} from "./Auth"
     import {tick} from 'svelte'
+    import { gv } from "./Global_variables";
 
     let redirect;
     let tenants = [];
@@ -10,35 +11,40 @@
 
     $: initialize($_hd_auth_location, $_hd_auth_querystring);
 
-    function initialize(location, querystring)
+    async function initialize(location, querystring)
     {
         let args = new URLSearchParams(querystring);
         redirect =   args.has("redirect")   ?   args.get("redirect")    : "";
 
         if(!redirect)
-            return error("Parameter 'redirect' not specified")
+            return await error("Parameter 'redirect' not specified")
 
         tokens_info = Internals.obtained_tokens_info;
         if(!tokens_info)
-            return error("Unknown tokens info");
+            return await error("Unknown tokens info");
 
         let tenants_info = tokens_info.tenants;
         if( tenants_info && Array.isArray(tenants_info) && tenants_info.length > 0)
             tenants = tenants_info;
         else
-            return error("Tenants list not specified in resulted tokens info")
+            return await error("Tenants list not specified in resulted tokens info")
     }
 
-    function select_tenant(tenant)
+    async function select_tenant(tenant)
     {
         if($session.signin(tokens_info, tenant.id))
+        {
+            gv.set('_hd_auth_last_chosen_tenant_id', tenant.id, true)
+            await tick();
             window.location.href = redirect;
+        }
         else
-            error("Something wrong with tokens");
+            await error("Something wrong with tokens");
     }
 
-    function error(msg)
+    async function error(msg)
     {
+        await tick();
         window.location.href = "/#/auth/err?desc=" + encodeURIComponent(msg);
         return msg;
     }
