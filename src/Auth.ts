@@ -1,6 +1,7 @@
 import { session, Session } from "./Session";
 import type { Configuration } from "./Configuration";
 import { derived, readable, get } from "svelte/store";
+import { gv } from "./Global_variables";
 
 export class reef
 {
@@ -74,7 +75,7 @@ export class reef
         if(path.startsWith('/json/'))
             return path;
 
-        let apiver = 'yav1';    // default
+        let apiver = 'v001';    // default
         let _session :Session = get(session);
         if(_session && _session.configuration && _session.configuration.api_version)
             apiver = _session.configuration.api_version;
@@ -197,6 +198,19 @@ export class reef
             if(res.ok)
             {
                 let tokens = await res.json();
+
+                if(tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1)
+                {
+                    let tenant_id;
+                    if(!gv.get("_hd_auth_last_chosen_tenant_id", (v) => {tenant_id=v;}))
+                        tenant_id = tokens.tenants[tokens.tenants.length-1].id;
+
+                    if(_session.signin(tokens, tenant_id))
+                        return true;
+                    else
+                        return false;
+                }
+
                 if(_session.signin(tokens))
                     return true;
                 else
@@ -219,6 +233,36 @@ export class reef
         }
     }
 
+    public static async am_I_admin() :Promise<boolean>
+    {
+        let _session :Session = get(session);
+        let tenant_id = _session.tid;
+        let path =`/auth/am_i_admin?tenant=${tenant_id}`;
+
+        try
+        {
+            let res = await reef.fetch(path)
+            if(res.ok)
+            {
+                const response_string = await res.text();
+                if(!response_string)
+                    return false
+                else
+                {
+                    let res = JSON.parse(response_string);
+                    return res.response ?? false;
+                }
+            }
+            else
+                return false;
+        }
+        catch(err)
+        {
+            console.error(err);
+            return false;
+        }
+    }
+
     public static location_changed(...args)
     {
         if(get(loc).href != window.location.href)
@@ -231,7 +275,7 @@ export class reef
 
 function get_location()
 {
-    //console.log('auth update:', window.location.href)
+    console.log('set location:', window.location.href)
     const href = window.location.href;
     const hashPosition = href.indexOf('#/')
     let base_address = window.location.pathname;

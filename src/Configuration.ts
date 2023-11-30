@@ -19,5 +19,5 @@ export class Configuration
     public  local_api       :string     = "";
     public  local_users     :string[]   = [];
 
-    public  api_version     :string     = "yav1";
+    public  api_version     :string     = "v001";
 }

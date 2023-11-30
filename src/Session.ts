@@ -43,20 +43,20 @@ export class Session
                 this.configuration.client_id        = cfg.remote.client_id;
                 this.configuration.client_secret    = cfg.remote.client_secret;
                 this.configuration.scope            = cfg.remote.scope;
-                this.configuration.api_version      = cfg.remote.api_version ?? "yav1";
+                this.configuration.api_version      = cfg.remote.api_version ?? "v001";
                 break;
 
             case 'local':
                 this.configuration.mode         = Mode.Local;
                 this.configuration.local_api    = cfg.local.api;
                 this.configuration.local_users  = [...cfg.local.users];
-                this.configuration.api_version  = cfg.local.api_version ?? "yav1";
+                this.configuration.api_version  = cfg.local.api_version ?? "v001";
                 break;
 
             case 'disabled':
                 this.configuration.mode         = Mode.Disabled;
                 this.configuration.local_api    = cfg.local.api;
-                this.configuration.api_version  = cfg.local.api_version ?? "yav1";
+                this.configuration.api_version  = cfg.local.api_version ?? "v001";
                 break;
             }
         }
@@ -349,7 +349,7 @@ export class Session
         session.set(new_session);       // forces store subscribers
     }
 
-    public async is_admin() :Promise<boolean>
+    public async __is_admin() :Promise<boolean>
     {
         if(!this.is_valid)
             this.validate();

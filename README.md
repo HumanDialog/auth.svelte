@@ -133,11 +133,19 @@ It wraps original `fetch` function with authorization support stuff. It will:
 
  ##### Example:
 ```js
-    let res = await reef.fetch("/json/yav1/app/Lists/new",
+    let res = await reef.fetch("/json/v001/app/Lists/new",
                                 {
                                     method:'POST',
                                     body: JSON.stringify({Name: list_name})
                                 });
+```
+
+### `reef.am_I_admin` function
+The `reef.am_I_admin` makes HTTP GET request to the ObjectReef Identity Provider to check is authenticated user has admin privileges for current tenant.
+
+##### Example:
+```js
+    let is_admin = await reef.am_I_admin();
 ```
 
 ### Useful variables
@@ -169,8 +177,6 @@ Returns tenant API address
 #### `$session.tid :string`
 Returns tenant id
 
-#### `$session.is_admin :boolean`
-Returns `true` when authenicated user has ***admin*** privileges and can add and delete other users from tenant.
 
 #### `$signin_href` and `$signout_href`
 Returns `string` value to make sign-in and sign-out anchor
