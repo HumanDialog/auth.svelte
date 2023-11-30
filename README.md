@@ -133,7 +133,7 @@ It wraps original `fetch` function with authorization support stuff. It will:
 
  ##### Example:
 ```js
-    let res = await reef.fetch("/json/yav1/app/Lists/new",
+    let res = await reef.fetch("/json/v001/app/Lists/new",
                                 {
                                     method:'POST',
                                     body: JSON.stringify({Name: list_name})

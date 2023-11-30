@@ -75,7 +75,7 @@ export class reef
         if(path.startsWith('/json/'))
             return path;
 
-        let apiver = 'yav1';    // default
+        let apiver = 'v001';    // default
         let _session :Session = get(session);
         if(_session && _session.configuration && _session.configuration.api_version)
             apiver = _session.configuration.api_version;
