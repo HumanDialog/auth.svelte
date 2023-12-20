@@ -1,7 +1,7 @@
 import { session, Session } from "./Session";
 import type { Configuration } from "./Configuration";
 import { derived, readable, get } from "svelte/store";
-import { gv } from "./Global_variables";
+import { gv } from "./Storage";
 
 export class reef
 {
@@ -56,7 +56,7 @@ export class reef
                 if(!_session.access_token.not_expired)
                 {
                     if(!await this.refresh_tokens())
-                        return fetch(resource, options);
+                        this.redirect_to_sign_in();
                 }
 
                 options.headers.append("Authorization", "Bearer " + _session.access_token.raw);
@@ -261,6 +261,26 @@ export class reef
             console.error(err);
             return false;
         }
+    }
+
+    public static redirect_to_sign_in()
+    {
+        let current_path :string;
+        current_path = window.location.href;
+
+        //console.log('auth, location.pathname', window.location.pathname)
+        let navto :string = window.location.pathname;
+        if(!navto)
+            navto = '/';
+
+        if(!navto.endsWith('/'))
+            navto += '/';
+
+        navto += "#/auth/signin?redirect=" + encodeURIComponent(current_path);
+
+        //console.log('auth, navto', navto)
+        //await tick();
+        window.location.href = navto;
     }
 
     public static location_changed(...args)

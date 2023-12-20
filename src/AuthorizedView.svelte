@@ -1,6 +1,6 @@
 <script lang="ts">
     import { session } from "./Session";
-    import {_hd_auth_location, _hd_auth_querystring} from './Auth'
+    import {_hd_auth_location, _hd_auth_querystring, reef} from './Auth'
     import Authorize from "./Authorize.svelte";
     import LocalAuthorize from "./LocalAuthorize.svelte"
     import ChooseTenant from "./ChooseTenant.svelte";
@@ -50,7 +50,8 @@
         else if(autoRedirectToSignIn)
         {
             console.log("what_to_show not active -> redirect")
-            redirect_to_sign_in_page();
+            setTimeout( () => reef.redirect_to_sign_in(), 100);
+            //reef.redirect_to_sign_in();
             return WAITING;
         }
         else
@@ -59,26 +60,6 @@
             return CONTENT;
         }
 
-    }
-
-    function redirect_to_sign_in_page()
-    {
-        let current_path :string;
-        current_path = window.location.href;
-
-        //console.log('auth, location.pathname', window.location.pathname)
-        let navto :string = window.location.pathname;
-        if(!navto)
-            navto = '/';
-
-        if(!navto.endsWith('/'))
-            navto += '/';
-
-        navto += "#/auth/signin?redirect=" + encodeURIComponent(current_path);
-
-        //console.log('auth, navto', navto)
-        //await tick();
-        window.location.href = navto;
     }
 
     $: show = what_to_show($session, $_hd_auth_location);

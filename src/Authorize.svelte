@@ -1,6 +1,6 @@
 <script lang="ts">
     import { session } from "./Session";
-    import {gv} from "./Global_variables"
+    import {gv} from "./Storage"
     import {reef, _hd_auth_location, _hd_auth_querystring, _hd_auth_base_address} from "./Auth"
     import type { Configuration } from "./Configuration";
     import {Internals} from './internals'

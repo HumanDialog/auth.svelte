@@ -3,7 +3,7 @@
     import {Internals} from "./internals"
     import {_hd_auth_location, _hd_auth_querystring} from "./Auth"
     import {tick} from 'svelte'
-    import { gv } from "./Global_variables";
+    import { gv } from "./Storage";
 
     let redirect;
     let tenants = [];
@@ -34,7 +34,7 @@
     {
         if($session.signin(tokens_info, tenant.id))
         {
-            gv.set('_hd_auth_last_chosen_tenant_id', tenant.id, true)
+            gv.set('_hd_auth_last_chosen_tenant_id', tenant.id, $session.configuration.refresh_token_persistent)
             await tick();
             window.location.href = redirect;
         }

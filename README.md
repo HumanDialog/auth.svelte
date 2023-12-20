@@ -28,9 +28,12 @@ To install the package on your Svelte project type:\
                   client_id: "<YOUR_CLIENT_ID>",
                   client_secret: "<YOUR_CLIENT_SECRET>",
                   scope:     "openid profile email <YOUR_APP_ID>",
+                  api_version: "v001",
+                  refresh_token_persistent: true
               },
               local: {
                 api: "http://localhost:1996",
+                api_version: "v002",
                 users: [
                     "bob@example.com",
                     "alice@example.com"

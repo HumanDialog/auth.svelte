@@ -1,5 +1,5 @@
 import { Token } from "./Token"
-import { gv } from "./Global_variables";
+import { gv } from "./Storage";
 import { Configuration, Mode } from "./Configuration";
 import {Writable, writable} from 'svelte/store'
 
@@ -44,6 +44,7 @@ export class Session
                 this.configuration.client_secret    = cfg.remote.client_secret;
                 this.configuration.scope            = cfg.remote.scope;
                 this.configuration.api_version      = cfg.remote.api_version ?? "v001";
+                this.configuration.refresh_token_persistent = cfg.remote.refresh_token_persistent ?? true;
                 break;
 
             case 'local':
@@ -267,7 +268,7 @@ export class Session
 
         gv.set("_hd_auth_access_token", tokens_info.access_token);
         gv.set("_hd_auth_id_token", tokens_info.id_token);
-        gv.set("_hd_auth_refresh_token", tokens_info.refresh_token, true);
+        gv.set("_hd_auth_refresh_token", tokens_info.refresh_token, this.configuration.refresh_token_persistent);
 
         if(tokens_info.tenant != undefined)
             this.set_current_tenant_api(tokens_info.tenant.url, tokens_info.tenant.id);
@@ -330,7 +331,7 @@ export class Session
     {
         gv.set("_hd_auth_id_token", "");
         gv.set("_hd_auth_access_token", "");
-        gv.set("_hd_auth_refresh_token", "", true);
+        gv.set("_hd_auth_refresh_token", "", this.configuration.refresh_token_persistent);
 
         gv.set("_hd_auth_api_address", "");
         gv.set("_hd_auth_tenant", "");
