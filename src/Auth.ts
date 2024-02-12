@@ -333,4 +333,5 @@ export const _hd_auth_querystring = derived(loc, ($loc) => $loc.querystring);
 export const _hd_auth_base_address = derived(loc, ($loc) => $loc.base_address);
 export const signin_href = derived(loc, ($loc) => '#/auth/signin?redirect=' + encodeURIComponent($loc.href));
 export const signout_href = derived(loc, ($loc) => '#/auth/signout?redirect=' + encodeURIComponent($loc.href));
+export const signup_href = derived(loc, ($loc) => '#/auth/signup?redirect=' + encodeURIComponent($loc.href));
 

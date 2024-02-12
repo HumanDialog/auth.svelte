@@ -88,6 +88,39 @@
             window.location.href = redirect;
             break;
 
+        case "signup":
+            {
+                if(redirect == "")
+                    redirect = "/";
+
+                if($session.disabled)
+                {
+                    await tick();
+                    window.location.href = redirect;
+                }
+                else if($session.local)
+                {
+                    let navto :string = window.location.pathname;
+                    if(!navto)
+                        navto = '/';
+
+                    if(!navto.endsWith('/'))
+                        navto += '/';
+
+                    navto += "#/auth/err?desc=Signup+is+not+supported+in+local+environment"
+                    await tick();
+                    window.location.href = navto 
+                }
+                else
+                {
+                    $session.signout();
+                    redirect_to = await generate_signup_redirection(redirect);
+                    await tick();
+                    window.location.href = redirect_to;
+                }
+            }
+            break;
+
         case "cb":
             redirect_to = await handle_authorization_callback();
             await tick();
@@ -139,6 +172,29 @@
         result += "&code_challenge=" + code_challenge;
         result += "&code_challenge_method=S256";
         result += "&state="+ encodeURIComponent(redirection_after_signin);
+        
+        return result;
+    }
+
+    async function generate_signup_redirection(redirection_after_signin :string) : Promise<string>
+    {
+        let conf = $session.configuration;
+        
+        let result :string;
+        result = conf.iss + "/auth/authorize";
+        result += "?redirect_uri=" + encodeURIComponent(window.location.origin + "/#/auth/cb");
+        result += "&scope=" + encodeURIComponent(conf.scope);
+        result += "&grant_type=code";
+        result += "&client_id=" + conf.client_id;
+
+        let code_verfier :string = push_code_verifier();
+        let code_challenge :string = await get_code_challenge(code_verfier);
+
+        result += "&code_challenge=" + code_challenge;
+        result += "&code_challenge_method=S256";
+        result += "&state="+ encodeURIComponent(redirection_after_signin);
+
+        result += "&is_signup=true";
         
         return result;
     }

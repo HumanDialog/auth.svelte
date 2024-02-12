@@ -181,12 +181,13 @@ Returns tenant API address
 Returns tenant id
 
 
-#### `$signin_href` and `$signout_href`
-Returns `string` value to make sign-in and sign-out anchor
+#### `$signin_href`, `$signout_href` and `$signup_href`
+Returns `string` value to make sign-in, sign-out or sign-up anchor
  ##### Example:
 ```html
     <a href={$signout_href}>Sign out</a>
     <a href={$signin_href}>Sign in</a>
+    <a href={$signup_href}>Sign up</a>
 ```
 
 
