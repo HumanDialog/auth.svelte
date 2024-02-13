@@ -195,6 +195,12 @@
         result += "&state="+ encodeURIComponent(redirection_after_signin);
 
         result += "&is_signup=true";
+
+        if(conf.terms_and_conditions_href)
+            result += "&terms=" + encodeURIComponent(conf.terms_and_conditions_href);
+
+        if(conf.privacy_policy_href)
+            result += "&privacy=" + encodeURIComponent(conf.privacy_policy_href); 
         
         return result;
     }

@@ -29,7 +29,12 @@ To install the package on your Svelte project type:\
                   client_secret: "<YOUR_CLIENT_SECRET>",
                   scope:     "openid profile email <YOUR_APP_ID>",
                   api_version: "v001",
-                  refresh_token_persistent: true
+                  refresh_token_persistent: true,
+                  
+                  // Used only for signup form. Optional. 
+                  // If specified checkboxes on consents are presented
+                  terms_and_conditions_href: "https://example.com/terms-and-conditions"
+                  privacy_policy_href: "https://example.com/privacy-policy"
               },
               local: {
                 api: "http://localhost:1996",

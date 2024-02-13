@@ -1,6 +1,6 @@
 {
   "name": "@humandialog/auth.svelte",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Svelte package to deal with ObjectReef OAuth 2 Identity Provider",
   "svelte": "src/index.ts",
   "module": "dist/index.mjs",

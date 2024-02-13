@@ -44,7 +44,9 @@ export class Session
                 this.configuration.client_secret    = cfg.remote.client_secret;
                 this.configuration.scope            = cfg.remote.scope;
                 this.configuration.api_version      = cfg.remote.api_version ?? "v001";
-                this.configuration.refresh_token_persistent = cfg.remote.refresh_token_persistent ?? true;
+                this.configuration.refresh_token_persistent  = cfg.remote.refresh_token_persistent ?? true;
+                this.configuration.terms_and_conditions_href = cfg.remote.terms_and_conditions_href;    
+                this.configuration.privacy_policy_href       = cfg.remote.privacy_policy_href;  
                 break;
 
             case 'local':
