@@ -1,7 +1,7 @@
 # @humandialog/auth.svelte
 
 <h1 style="font-size: 64px">
-<img src="https://objectreef.dev/reef.png" alt="ObjectReef logo" width="90">
+<img src="https://objectreef.dev/reef.png" alt="ObjectReef logo" width="60">
 ObjectReef&reg;
 </h1>
 
@@ -25,20 +25,20 @@ To install the package on your Svelte project type:\
               mode: 'remote', // possible: 'remote', 'local', 'disabled'
               remote: {
                   iss:       "https://objectreef.io",
-                  client_id: "<YOUR_CLIENT_ID>",
-                  client_secret: "<YOUR_CLIENT_SECRET>",
+                  clientID: "<YOUR_CLIENT_ID>",
+                  clientSecret: "<YOUR_CLIENT_SECRET>",
                   scope:     "openid profile email <YOUR_APP_ID>",
-                  api_version: "v001",
-                  refresh_token_persistent: true,
+                  apiVersion: "v001",
+                  refreshTokenPersistent: true,
                   
                   // Used only for signup form. Optional. 
                   // If specified checkboxes on consents are presented
-                  terms_and_conditions_href: "https://example.com/terms-and-conditions"
-                  privacy_policy_href: "https://example.com/privacy-policy"
+                  termsAndConditionsHRef: "https://example.com/terms-and-conditions"
+                  privacyPolicyHRef: "https://example.com/privacy-policy"
               },
               local: {
                 api: "http://localhost:1996",
-                api_version: "v002",
+                apiVersion: "v002",
                 users: [
                     "bob@example.com",
                     "alice@example.com"
@@ -153,7 +153,7 @@ The `reef.amIAdmin` makes HTTP GET request to the ObjectReef Identity Provider t
 
 ##### Example:
 ```js
-    let is_admin = await reef.amIAdmin();
+    let isAdmin = await reef.amIAdmin();
 ```
 
 ### Useful variables
