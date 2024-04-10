@@ -1,4 +1,13 @@
-export class Global_variables
+export interface Storage
+{
+    set(key :string, value :string, permanent :boolean) :void;
+    set_num(key :string, value :number, permanent :boolean) :void
+    has(key :string) :boolean;
+    get(key :string, out :(val :string) => void) : boolean;         // usage: if(!get('somekey', (v) => { scopedValue=v; } )) ...
+    get_num(key :string, out :(val :number) => void) : boolean;
+}
+
+export class Browser_storage implements Storage
 {
     public set(key :string, value :string, permanent :boolean = false) :void
     {
@@ -63,4 +72,4 @@ export class Global_variables
     }
 }
 
-export let gv :Global_variables = new Global_variables;
+export let gv :Browser_storage = new Browser_storage;

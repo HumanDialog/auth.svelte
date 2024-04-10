@@ -20,4 +20,9 @@ export class Configuration
     public  local_users     :string[]   = [];
 
     public  api_version     :string     = "v001";
+
+    public  refresh_token_persistent :boolean = true;
+
+    public terms_and_conditions_href :string = "";
+    public privacy_policy_href :string = "";
 }

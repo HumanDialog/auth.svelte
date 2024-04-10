@@ -28,9 +28,17 @@ To install the package on your Svelte project type:\
                   client_id: "<YOUR_CLIENT_ID>",
                   client_secret: "<YOUR_CLIENT_SECRET>",
                   scope:     "openid profile email <YOUR_APP_ID>",
+                  api_version: "v001",
+                  refresh_token_persistent: true,
+                  
+                  // Used only for signup form. Optional. 
+                  // If specified checkboxes on consents are presented
+                  terms_and_conditions_href: "https://example.com/terms-and-conditions"
+                  privacy_policy_href: "https://example.com/privacy-policy"
               },
               local: {
                 api: "http://localhost:1996",
+                api_version: "v002",
                 users: [
                     "bob@example.com",
                     "alice@example.com"
@@ -178,12 +186,13 @@ Returns tenant API address
 Returns tenant id
 
 
-#### `$signin_href` and `$signout_href`
-Returns `string` value to make sign-in and sign-out anchor
+#### `$signin_href`, `$signout_href` and `$signup_href`
+Returns `string` value to make sign-in, sign-out or sign-up anchor
  ##### Example:
 ```html
     <a href={$signout_href}>Sign out</a>
     <a href={$signin_href}>Sign in</a>
+    <a href={$signup_href}>Sign up</a>
 ```
 
 

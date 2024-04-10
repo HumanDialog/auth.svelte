@@ -1,7 +1,7 @@
 import { session, Session } from "./Session";
 import type { Configuration } from "./Configuration";
 import { derived, readable, get } from "svelte/store";
-import { gv } from "./Global_variables";
+import { gv } from "./Storage";
 
 export class reef
 {
@@ -56,7 +56,7 @@ export class reef
                 if(!_session.access_token.not_expired)
                 {
                     if(!await this.refresh_tokens())
-                        return fetch(resource, options);
+                        this.redirect_to_sign_in();
                 }
 
                 options.headers.append("Authorization", "Bearer " + _session.access_token.raw);
@@ -263,6 +263,26 @@ export class reef
         }
     }
 
+    public static redirect_to_sign_in()
+    {
+        let current_path :string;
+        current_path = window.location.href;
+
+        //console.log('auth, location.pathname', window.location.pathname)
+        let navto :string = window.location.pathname;
+        if(!navto)
+            navto = '/';
+
+        if(!navto.endsWith('/'))
+            navto += '/';
+
+        navto += "#/auth/signin?redirect=" + encodeURIComponent(current_path);
+
+        //console.log('auth, navto', navto)
+        //await tick();
+        window.location.href = navto;
+    }
+
     public static location_changed(...args)
     {
         if(get(loc).href != window.location.href)
@@ -313,4 +333,5 @@ export const _hd_auth_querystring = derived(loc, ($loc) => $loc.querystring);
 export const _hd_auth_base_address = derived(loc, ($loc) => $loc.base_address);
 export const signin_href = derived(loc, ($loc) => '#/auth/signin?redirect=' + encodeURIComponent($loc.href));
 export const signout_href = derived(loc, ($loc) => '#/auth/signout?redirect=' + encodeURIComponent($loc.href));
+export const signup_href = derived(loc, ($loc) => '#/auth/signup?redirect=' + encodeURIComponent($loc.href));
 
