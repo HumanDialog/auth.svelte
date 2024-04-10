@@ -40,26 +40,26 @@ export class Session
             case 'remote':
                 this.configuration.mode             = Mode.Remote;
                 this.configuration.iss              = cfg.remote.iss;
-                this.configuration.client_id        = cfg.remote.client_id;
-                this.configuration.client_secret    = cfg.remote.client_secret;
+                this.configuration.client_id        = cfg.remote.client_id ?? cfg.remote.clientID;
+                this.configuration.client_secret    = cfg.remote.client_secret ?? cfg.remote.clientSecret;
                 this.configuration.scope            = cfg.remote.scope;
-                this.configuration.api_version      = cfg.remote.api_version ?? "v001";
-                this.configuration.refresh_token_persistent  = cfg.remote.refresh_token_persistent ?? true;
-                this.configuration.terms_and_conditions_href = cfg.remote.terms_and_conditions_href;    
-                this.configuration.privacy_policy_href       = cfg.remote.privacy_policy_href;  
+                this.configuration.api_version      = cfg.remote.api_version ?? cfg.remote.apiVersion ?? "v001";
+                this.configuration.refresh_token_persistent  = cfg.remote.refresh_token_persistent ?? cfg.remote.refreshTokenPersistent ?? true;
+                this.configuration.terms_and_conditions_href = cfg.remote.terms_and_conditions_href ?? cfg.remote.termsAndConditionsHRef;    
+                this.configuration.privacy_policy_href       = cfg.remote.privacy_policy_href ?? cfg.remote.privacyPolicyHRef;
                 break;
 
             case 'local':
                 this.configuration.mode         = Mode.Local;
                 this.configuration.local_api    = cfg.local.api;
                 this.configuration.local_users  = [...cfg.local.users];
-                this.configuration.api_version  = cfg.local.api_version ?? "v001";
+                this.configuration.api_version  = cfg.local.api_version ?? cfg.local.apiVersion ?? "v001";
                 break;
 
             case 'disabled':
                 this.configuration.mode         = Mode.Disabled;
                 this.configuration.local_api    = cfg.local.api;
-                this.configuration.api_version  = cfg.local.api_version ?? "v001";
+                this.configuration.api_version  = cfg.local.api_version ?? cfg.local.apiVersion ?? "v001";
                 break;
             }
         }
@@ -74,7 +74,7 @@ export class Session
         {
             gv.set('_hd_auth_cfg', JSON.stringify(cfg))
 
-            if(this.is_valid)  
+            if(this.isValid)  
                 this.boost_validation_ticket();
             
             let new_session :Session = new Session();
@@ -94,9 +94,9 @@ export class Session
         this.configuration          = src.configuration;
     }
     
-    public get is_active()  :boolean
+    public get isActive()  :boolean
     {
-        if(!this.is_valid)
+        if(!this.isValid)
             this.validate();
 
         return this._is_active;
@@ -104,37 +104,37 @@ export class Session
 
     public get user()  :User
     {
-        if(!this.is_valid)
+        if(!this.isValid)
             this.validate();
 
         return this._user;
     }
 
-    public get id_token()  :Token
+    public get idToken()  :Token
     {
-        if(!this.is_valid)
+        if(!this.isValid)
             this.validate();
 
         return this._id_token;
     }
 
-    public get access_token()  :Token
+    public get accessToken()  :Token
     {
-        if(!this.is_valid)
+        if(!this.isValid)
             this.validate();
 
         return this._access_token;
     }
 
-    public get refresh_token()  :Token
+    public get refreshToken()  :Token
     {
-        if(!this.is_valid)
+        if(!this.isValid)
             this.validate();
 
         return this._refresh_token;
     }
 
-    public get is_valid() :boolean
+    public get isValid() :boolean
     {
         let ticket :number;
         if(!gv.get_num("_hd_auth_session_validation_ticket", (v) => {ticket = v;}))
@@ -143,7 +143,7 @@ export class Session
         return (ticket == this.my_validation_ticket);
     }
 
-    public get api_address()    :string
+    public get apiAddress()    :string
     {
         let res :string;
         if(gv.get("_hd_auth_api_address", (v)=>{res=v;}))
@@ -196,9 +196,9 @@ export class Session
         }
         else if(this.local)
         {
-            if(this.local_dev_current_user)
+            if(this.localDevCurrentUser)
             {
-                if(this.configuration.local_users.find( v => v==this.local_dev_current_user))
+                if(this.configuration.local_users.find( v => v==this.localDevCurrentUser))
                 {
                     this._is_active = true;
                 }
@@ -354,10 +354,10 @@ export class Session
 
     public async __is_admin() :Promise<boolean>
     {
-        if(!this.is_valid)
+        if(!this.isValid)
             this.validate();
 
-        if(!this.is_active)
+        if(!this.isActive)
             return false;
 
         if(this.tid == "")
@@ -466,7 +466,7 @@ export class Session
         }
     }
 
-    public set_local_dev_current_user(email :string)
+    public setLocalDevCurrentUser(email :string)
     {
         //console.log('set local user', email);
 
@@ -481,7 +481,7 @@ export class Session
         
     }
 
-    public get local_dev_current_user() :string
+    public get localDevCurrentUser() :string
     {
         let email :string;
         gv.get('_hd_auth_local_dev_user', (v)=>{email=v;});

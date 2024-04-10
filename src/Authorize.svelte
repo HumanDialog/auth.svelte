@@ -66,7 +66,7 @@
                 }
                 else
                 {
-                    let session_refreshed_successfully :boolean = await reef.refresh_tokens();
+                    let session_refreshed_successfully :boolean = await reef.refreshTokens();
                     if(session_refreshed_successfully)
                     {
                         await tick();

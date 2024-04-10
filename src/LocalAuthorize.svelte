@@ -14,7 +14,7 @@
 
     async function signin_local_user(user :string)
     {
-        $session.set_local_dev_current_user(user);
+        $session.setLocalDevCurrentUser(user);
         if(redirect)
         {
             await tick();
