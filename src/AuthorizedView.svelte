@@ -22,41 +22,41 @@
 
         if(isDisabled)
         {
-            console.log("what_to_show / disabled")
+         //   console.log("what_to_show / disabled")
             return CONTENT;
         }
         else if(location.startsWith('/auth-local'))
         {
-            console.log("what_to_show auth-local")
+        //    console.log("what_to_show auth-local")
            return CHOOSE_LOCAL_USER;
         }
         else if(location.startsWith('/auth/choose-tenant'))
         {
-            console.log("what_to_show choose-tenant")
+        //    console.log("what_to_show choose-tenant")
 
             return CHOOSE_TENANT;
         }
         else if(location.startsWith('/auth'))
         {
-            console.log("what_to_show auth")
+        //    console.log("what_to_show auth")
 
             return AUTHORIZE;
         }
-        else if($session.is_active)
+        else if($session.isActive)
         {
-            console.log("what_to_show is active")
+        //    console.log("what_to_show is active")
             return CONTENT;
         }
         else if(autoRedirectToSignIn)
         {
-            console.log("what_to_show not active -> redirect")
-            setTimeout( () => reef.redirect_to_sign_in(), 100);
-            //reef.redirect_to_sign_in();
+        //    console.log("what_to_show not active -> redirect")
+            setTimeout( () => reef.redirectToSignIn(), 100);
+            //reef.redirectToSignIn();
             return WAITING;
         }
         else
         {
-            console.log("what_to_show not active, let show not authorized views")
+        //    console.log("what_to_show not active, let show not authorized views")
             return CONTENT;
         }
 

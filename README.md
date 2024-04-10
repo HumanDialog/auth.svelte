@@ -76,7 +76,7 @@ The `Authorized` encapsulate content which should be visible only when user has 
 ##### Example:
 ```html
     <Authorized>
-        <a href={$signout_href}>Sign out</a>
+        <a href={$signOutHRef}>Sign out</a>
     </Authorized>
 ```
 
@@ -86,7 +86,7 @@ The `NotAuthorized` encapsulate content which should be visible only when user h
 ##### Example:
 ```html
     <NotAuthorized>
-        <a href={$signin_href}>Sign in</a>
+        <a href={$signInHRef}>Sign in</a>
     </NotAuthorized>
 ```
 
@@ -148,12 +148,12 @@ It wraps original `fetch` function with authorization support stuff. It will:
                                 });
 ```
 
-### `reef.am_I_admin` function
-The `reef.am_I_admin` makes HTTP GET request to the ObjectReef Identity Provider to check is authenticated user has admin privileges for current tenant.
+### `reef.amIAdmin` function
+The `reef.amIAdmin` makes HTTP GET request to the ObjectReef Identity Provider to check is authenticated user has admin privileges for current tenant.
 
 ##### Example:
 ```js
-    let is_admin = await reef.am_I_admin();
+    let is_admin = await reef.amIAdmin();
 ```
 
 ### Useful variables
@@ -167,8 +167,8 @@ The `$session.user` object contains authenticated user info
 | `email` | `string`  |
 | `email_verified` | `boolean`  |
 
-#### `$session.id_token` and `$session.access_token`
-Returns the ***id_token*** or ***access_token*** object with members like the following:
+#### `$session.idToken` and `$session.accessToken`
+Returns the ***idToken*** or ***accessToken*** object with members like the following:
 | member     | type    |
 | ---------- | ------- |
 | `header` | `string`  |
@@ -179,20 +179,20 @@ Returns the ***id_token*** or ***access_token*** object with members like the fo
 | `get_claim<T>(key :string)` | `T\|undefined`  |
 
 
-#### `$session.api_address :string`
+#### `$session.apiAddress :string`
 Returns tenant API address
 
 #### `$session.tid :string`
 Returns tenant id
 
 
-#### `$signin_href`, `$signout_href` and `$signup_href`
+#### `$signInHRef`, `$signOutHRef` and `$signUpHRef`
 Returns `string` value to make sign-in, sign-out or sign-up anchor
  ##### Example:
 ```html
-    <a href={$signout_href}>Sign out</a>
-    <a href={$signin_href}>Sign in</a>
-    <a href={$signup_href}>Sign up</a>
+    <a href={$signOutHRef}>Sign out</a>
+    <a href={$signInHRef}>Sign in</a>
+    <a href={$signUpHRef}>Sign up</a>
 ```
 
 

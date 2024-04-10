@@ -2,6 +2,6 @@
     import { session } from "./Session";
 </script>
 
-{#if !$session.is_active}
+{#if !$session.isActive}
     <slot/>
 {/if}
