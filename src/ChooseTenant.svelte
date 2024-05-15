@@ -34,7 +34,7 @@
     {
         if($session.signin(tokens_info, tenant.id))
         {
-            gv.set('_hd_auth_last_chosen_tenant_id', tenant.id, $session.configuration.refresh_token_persistent)
+            gv.set('_hd_auth_last_chosen_tenant_id', tenant.id, false); //$session.configuration.refresh_token_persistent)
             await tick();
             window.location.href = redirect;
         }

@@ -352,6 +352,65 @@ export class Session
         session.set(new_session);       // forces store subscribers
     }
 
+    public appAccessGroup() : number
+    {
+        const scopes = this.configuration.scope.split(' ')
+        if(scopes && scopes.length > 0)
+        {
+            const appId = scopes[scopes.length-1];
+            return this.accessGroup(appId);
+        }
+        else
+            return 0;
+    }
+
+    public authAccessGroup() : number
+    {
+        return this.accessGroup("auth");
+    }
+
+    public filesAccessGroup() : number
+    {
+        return this.accessGroup("files");
+    }
+
+    private accessGroup(scope: string) : number
+    {
+        if(!this.isActive)
+            return 0;
+
+        const token: Token = this.accessToken;
+        const access: object[] = token.payload['access'];
+
+        if( !!access && 
+            access.length > 0)
+        {
+            const scopeIdx = access.findIndex(e => e['app'] == scope)
+            if(scopeIdx < 0)
+                return 0;
+
+            const scope: object =  access[scopeIdx];
+
+            const scopeTenants = scope['tenants'];
+            if(!scopeTenants || scopeTenants.length == 0)
+                return 0;
+
+            for(let i=0; i<scopeTenants.length; i++)
+            {
+                const tenantInfo = scopeTenants[i];
+                if(typeof tenantInfo === 'object' && tenantInfo !== null)
+                {
+                    if(tenantInfo['tid'] == this.tid)
+                        return tenantInfo['gid'] ?? 0;
+                }
+            }
+            return 0;
+        }
+        else
+            return 0;
+
+    }
+
     public async __is_admin() :Promise<boolean>
     {
         if(!this.isValid)
