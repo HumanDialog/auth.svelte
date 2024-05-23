@@ -25,20 +25,20 @@ To install the package on your Svelte project type:\
               mode: 'remote', // possible: 'remote', 'local', 'disabled'
               remote: {
                   iss:       "https://objectreef.io",
-                  client_id: "<YOUR_CLIENT_ID>",
-                  client_secret: "<YOUR_CLIENT_SECRET>",
+                  clientID: "<YOUR_CLIENT_ID>",
+                  clientSecret: "<YOUR_CLIENT_SECRET>",
                   scope:     "openid profile email <YOUR_APP_ID>",
-                  api_version: "v001",
-                  refresh_token_persistent: true,
+                  apiVersion: "v001",
+                  refreshTokenPersistent: true,
                   
                   // Used only for signup form. Optional. 
                   // If specified checkboxes on consents are presented
-                  terms_and_conditions_href: "https://example.com/terms-and-conditions"
-                  privacy_policy_href: "https://example.com/privacy-policy"
+                  termsAndConditionsHRef: "https://example.com/terms-and-conditions",
+                  privacyPolicyHRef: "https://example.com/privacy-policy"
               },
               local: {
                 api: "http://localhost:1996",
-                api_version: "v002",
+                apiVersion: "v002",
                 users: [
                     "bob@example.com",
                     "alice@example.com"
@@ -55,7 +55,7 @@ The `'local'` mode can be useful during the local developement when you need req
 There are just few Svelte components to apply authorization to your website.
 
 #### AuthorizedView
-The `AuthorizedView` should be a root component for all autorized views on your website. Usualy it embedd the whole `App` content with routing component. \
+The `AuthorizedView` should be a root component for all autorized views on your website. Usualy it embedd the whole `App` content with routing component.
 
 The component parameters are:
 - `autoRedirectToSignIn :boolean` which is `true` by default.\
@@ -148,15 +148,7 @@ It wraps original `fetch` function with authorization support stuff. It will:
                                 });
 ```
 
-### `reef.amIAdmin` function
-The `reef.amIAdmin` makes HTTP GET request to the ObjectReef Identity Provider to check is authenticated user has admin privileges for current tenant.
-
-##### Example:
-```js
-    let is_admin = await reef.amIAdmin();
-```
-
-### Useful variables
+### Useful variables and operations on signed-in user
 #### `$session.user`
 The `$session.user` object contains authenticated user info
 | member     | type    |
@@ -185,6 +177,38 @@ Returns tenant API address
 #### `$session.tid :string`
 Returns tenant id
 
+#### `$session.appAccessGroup() :number`
+Returns application users group id of signed-in user. The returned value and meaning depends on the specific application.
+
+#### `$session.authAccessGroup() :number`
+Returns Identity Provider users group id of signed-in user. The possible values are a combination of the following bits:
+| bit field  | meaning    |
+| ------ | ------- |
+| `0x01` | Can read permissions of users in tenant  |
+| `0x02` | Can add new users to tenant  |
+| `0x04` | Can remove users and change users permissions in tenant  |
+
+This means that, for example, for a person with full privileges, the operation will return 0x07. And someone who can only invite new people will be in group 0x03
+
+##### Example:
+```js
+    let isAdmin = $session.authAccessGroup() == 0x07
+    let canSee  = $session.authAccessGroup() & 0x01
+```
+
+#### `$session.filesAccessGroup() :number`
+Returns files storage users group id of signed-in user. The possible values are a combination of the following bits:
+| bit field  | meaning    |
+| ------ | ------- |
+| `0x01` | Can read (download) files of the tenant  |
+| `0x02` | Can add  (upload) files to the tenant  |
+
+This means that, for example, for a person with full privileges, the operation will return 0x03. The read-only user will in 0x01 group. 
+
+##### Example:
+```js
+    let canDownload = $session.filesAccessGroup() & 0x01
+```
 
 #### `$signInHRef`, `$signOutHRef` and `$signUpHRef`
 Returns `string` value to make sign-in, sign-out or sign-up anchor

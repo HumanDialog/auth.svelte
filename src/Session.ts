@@ -354,6 +354,9 @@ export class Session
 
     public appAccessGroup() : number
     {
+        if(!this.configuration)
+            return 0;
+        
         const scopes = this.configuration.scope.split(' ')
         if(scopes && scopes.length > 0)
         {
@@ -380,6 +383,18 @@ export class Session
             return 0;
 
         const token: Token = this.accessToken;
+        if(token == undefined)
+            return 0;
+
+        if(token == null)
+            return 0;
+
+        if(!token.raw)
+            return 0;
+
+        if(!token.is_jwt)
+            return 0;
+
         const access: object[] = token.payload['access'];
 
         if( !!access && 
