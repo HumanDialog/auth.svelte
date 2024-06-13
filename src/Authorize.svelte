@@ -143,7 +143,7 @@
                 navto += "#/auth/err?desc=Bad+request:+"    + encodeURIComponent(window.location.href) 
                                                             + '+cmd:+'+encodeURIComponent(cmd)
                                                             + '+location:+'+encodeURIComponent(location)
-                console.log('cmd:', cmd, 'location:', location)
+                //console.log('cmd:', cmd, 'location:', location)
                 await tick();
                 window.location.href = navto 
             }

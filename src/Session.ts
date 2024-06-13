@@ -404,9 +404,9 @@ export class Session
             if(scopeIdx < 0)
                 return 0;
 
-            const scope: object =  access[scopeIdx];
+            const accessScope: object =  access[scopeIdx];
 
-            const scopeTenants = scope['tenants'];
+            const scopeTenants = accessScope['tenants'];
             if(!scopeTenants || scopeTenants.length == 0)
                 return 0;
 
