@@ -166,6 +166,9 @@
         result += "&grant_type=code";
         result += "&client_id=" + conf.client_id;
 
+        if(conf.tenant)
+            result += "&tenant=" + conf.tenant;
+
         let code_verfier :string = push_code_verifier();
         let code_challenge :string = await get_code_challenge(code_verfier);
 
@@ -186,6 +189,9 @@
         result += "&scope=" + encodeURIComponent(conf.scope);
         result += "&grant_type=code";
         result += "&client_id=" + conf.client_id;
+        
+        if(conf.tenant)
+            result += "&tenant=" + conf.tenant;
 
         let code_verfier :string = push_code_verifier();
         let code_challenge :string = await get_code_challenge(code_verfier);
@@ -277,8 +283,21 @@
                 // user needs to choose the tenant
                 if(tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1)
                 {
-                    Internals.obtained_tokens_info = tokens;
-                    return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
+                    if(conf.tenant)
+                    {
+                        if($session.signin(tokens, conf.tenant))
+                        {
+                            gv.set('_hd_auth_last_chosen_tenant_id', conf.tenant, false); //$session.configuration.refresh_token_persistent)
+                            return state;
+                        }
+                        else
+                            return "/#/auth/err?desc=Something+wrong+with+tokens.";
+                    }
+                    else
+                    {
+                        Internals.obtained_tokens_info = tokens;
+                        return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
+                    }
                 }
 
                 if($session.signin(tokens))

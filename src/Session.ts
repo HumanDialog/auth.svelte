@@ -44,6 +44,7 @@ export class Session
                 this.configuration.client_secret    = cfg.remote.client_secret ?? cfg.remote.clientSecret;
                 this.configuration.scope            = cfg.remote.scope;
                 this.configuration.api_version      = cfg.remote.api_version ?? cfg.remote.apiVersion ?? "v001";
+                this.configuration.tenant           = cfg.remote.tenant ?? "";
                 this.configuration.refresh_token_persistent  = cfg.remote.refresh_token_persistent ?? cfg.remote.refreshTokenPersistent ?? true;
                 this.configuration.terms_and_conditions_href = cfg.remote.terms_and_conditions_href ?? cfg.remote.termsAndConditionsHRef;    
                 this.configuration.privacy_policy_href       = cfg.remote.privacy_policy_href ?? cfg.remote.privacyPolicyHRef;
