@@ -150,7 +150,7 @@ export class reef {
         if (refresh_token == "")
             return false;
 
-        console.log("refreshing tokens..");
+        //console.log("refreshing tokens..");
 
         let conf: Configuration = _session.configuration;
         let data = new URLSearchParams();

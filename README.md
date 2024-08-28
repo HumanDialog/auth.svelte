@@ -30,6 +30,10 @@ To install the package on your Svelte project type:\
                   scope:     "openid profile email <YOUR_APP_ID>",
                   apiVersion: "v001",
                   refreshTokenPersistent: true,
+
+                  // Optional. It should be given for a public tenant, to which anyone can register as a user
+                  tenant:   "<PUBLIC_TENANT_ID>",   
+                  
                   
                   // Used only for signup form. Optional. 
                   // If specified checkboxes on consents are presented
