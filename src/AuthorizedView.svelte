@@ -17,46 +17,35 @@
 
     function what_to_show(...args) :number
     {
-        console.log("what_to_show")
         let location = $_hd_auth_location;
 
         if(isDisabled)
         {
-         //   console.log("what_to_show / disabled")
             return CONTENT;
         }
         else if(location.startsWith('/auth-local'))
         {
-        //    console.log("what_to_show auth-local")
            return CHOOSE_LOCAL_USER;
         }
         else if(location.startsWith('/auth/choose-tenant'))
         {
-        //    console.log("what_to_show choose-tenant")
-
             return CHOOSE_TENANT;
         }
         else if(location.startsWith('/auth'))
         {
-        //    console.log("what_to_show auth")
-
             return AUTHORIZE;
         }
         else if($session.isActive)
         {
-        //    console.log("what_to_show is active")
             return CONTENT;
         }
         else if(autoRedirectToSignIn)
         {
-        //    console.log("what_to_show not active -> redirect")
             setTimeout( () => reef.redirectToSignIn(), 100);
-            //reef.redirectToSignIn();
             return WAITING;
         }
         else
         {
-        //    console.log("what_to_show not active, let show not authorized views")
             return CONTENT;
         }
 
