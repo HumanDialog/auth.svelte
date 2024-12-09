@@ -2,6 +2,6 @@
     import { session } from "./Session";
 </script>
 
-{#if $session.isActive}
+{#if $session.isActive || $session.isUnauthorizedGuest}
     <slot/>
 {/if}

@@ -19,7 +19,17 @@
         if(!redirect)
             return await error("Parameter 'redirect' not specified")
 
-        tokens_info = Internals.obtained_tokens_info;
+        let tis: string;
+        if(!gv.get("_hd_auth_obtained_tokens_info", (v)=>{tis=v;}))
+            return await error("Unknown tokens info");
+
+        gv.set("_hd_auth_obtained_tokens_info", '')
+        
+        if(!tis)
+            return await error("Unknown tokens info");
+
+        tokens_info = JSON.parse(tis);
+
         if(!tokens_info)
             return await error("Unknown tokens info");
 
@@ -34,7 +44,6 @@
     {
         if($session.signin(tokens_info, tenant.id))
         {
-            gv.set('_hd_auth_last_chosen_tenant_id', tenant.id, false); //$session.configuration.refresh_token_persistent)
             await tick();
             window.location.href = redirect;
         }
@@ -50,12 +59,24 @@
     }
 </script>
 
-
+<!--
+    tenant:{
+        id: string
+        url: string
+        name: string
+        headers:[
+            {
+                key:'X-Reef-Group-Id',
+                value:'15'
+            }
+        ]
+    }
+-->
 
 <div class="flex flex-col items-center mt-0 sm:mt-10 ">
     <div class="w-full pt-2 pb-6 bg-zinc-100 rounded-lg shadow dark:border md:mt-0 sm:max-w-md dark:bg-zinc-700 bg-opacity-75">
         <div class="flex flex-col items-center">
-            <h1 class="mb-1 text-xl leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white font-normal">What tenant would you like to sign in?</h1>
+            <h1 class="mb-1 text-xl leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white font-normal">Choose a group</h1>
             <hr class="min-w-full border-1 border-zinc-400 opacity-75">
 
             {#each tenants as tenant}

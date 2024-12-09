@@ -12,13 +12,12 @@
     let code        :string = "";
     let state       :string = "";
     let desc        :string = "";
+    let asGuest     :boolean = false;
 
     let err_msg     :string = "";
 
     async function initialize(location :string, querystring :string)
     {
-        //console.log("Authorize: ", location, querystring);
-
         let segments :string[] = location.split('/');
         if(segments.length <= 1)
             return;
@@ -31,6 +30,7 @@
         code =       args.has("code")       ?   args.get("code")        : "";
         state =      args.has("state")      ?   args.get("state")       : "";
         desc =       args.has("desc")       ?   args.get("desc")        : "";
+        asGuest =    args.has("guest") ? true : false;
 
         if(redirect.startsWith('#'))
             redirect = redirect.slice(1);
@@ -67,6 +67,7 @@
                 else
                 {
                     let session_refreshed_successfully :boolean = await reef.refreshTokens();
+                    
                     if(session_refreshed_successfully)
                     {
                         await tick();
@@ -143,7 +144,6 @@
                 navto += "#/auth/err?desc=Bad+request:+"    + encodeURIComponent(window.location.href) 
                                                             + '+cmd:+'+encodeURIComponent(cmd)
                                                             + '+location:+'+encodeURIComponent(location)
-                //console.log('cmd:', cmd, 'location:', location)
                 await tick();
                 window.location.href = navto 
             }
@@ -169,6 +169,12 @@
         if(conf.tenant)
             result += "&tenant=" + conf.tenant;
 
+        if(conf.ask_organization_name)
+            result += "&org_name=true" 
+
+        if(conf.groups_only)
+            result += "&groups_only=true"
+
         let code_verfier :string = push_code_verifier();
         let code_challenge :string = await get_code_challenge(code_verfier);
 
@@ -192,6 +198,9 @@
         
         if(conf.tenant)
             result += "&tenant=" + conf.tenant;
+
+        if(conf.ask_organization_name)
+            result += "&org_name=true"
 
         let code_verfier :string = push_code_verifier();
         let code_challenge :string = await get_code_challenge(code_verfier);
@@ -252,6 +261,12 @@
 
     async function handle_authorization_callback() : Promise<string>
     {
+        if(asGuest)
+        {
+            $session.isUnauthorizedGuest = true;
+            return state;
+        }
+
         if(code == "")
             return state;
         
@@ -263,6 +278,12 @@
         data.append("code",         code);
         data.append("code_verifier", pop_code_verifier());
         data.append("grant_type",   "authorization_code");
+
+        if(conf.tenant)
+            data.append("tenant",   conf.tenant);
+
+        if(conf.groups_only)
+            data.append("groups_only", "true");
        
         try
         {
@@ -279,15 +300,100 @@
             if(res.ok)
             {
                 let tokens = await res.json();
-
+                
                 // user needs to choose the tenant
                 if(tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1)
                 {
+                    let lastChosenTenantId = $session.lastChosenTenantId;
+
+                    if(conf.tenant)         // do we have global tenant specified?
+                    {
+                        let filteredTenants = []
+                        if(conf.groups_only)
+                            filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant + '/'))
+                        else
+                            filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant))
+                        
+                        tokens.tenants = [...filteredTenants];
+                        
+                      
+                        if( tokens.tenants.length == 1)
+                        {
+                            if($session.signin(tokens))
+                                return state;
+                            else
+                                return "/#/auth/err?desc=Something+wrong+with+tokens.";   
+                        }
+                    }
+                    
+                    
+                    if(lastChosenTenantId)
+                    {
+                        if(tokens.tenants.some(t => t.id == lastChosenTenantId))       // is last used included 
+                        {
+                            if($session.signin(tokens, lastChosenTenantId))
+                            {
+                                return state;
+                            }
+                            else
+                                return "/#/auth/err?desc=Something+wrong+with+tokens.";
+                        }
+                        else
+                        {
+                            if(conf.let_choose_group_first)
+                            {
+                                // let user choose. user is removed from last used tenant
+                                gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                                return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
+                            }
+                            else
+                            {
+                                const firstTenantId = tokens.tenants[0].id;
+                             
+                                if($session.signin(tokens, firstTenantId))
+                                {
+                                    return state;
+                                }
+                                else
+                                    return "/#/auth/err?desc=Something+wrong+with+tokens.";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // let user choose. It's first time
+                        if(conf.let_choose_group_first)
+                        {
+                            gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                            return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
+                        }
+                        else
+                        {
+                            const firstTenantId = tokens.tenants[0].id;
+                            if($session.signin(tokens, firstTenantId))
+                            {
+                                return state;
+                            }
+                            else
+                                return "/#/auth/err?desc=Something+wrong+with+tokens.";
+                        }
+                    }
+                    
+                    /*
                     if(conf.tenant)
                     {
+                        
+
+
+                        if(lastChoosenTenantId && !isTenantIncluded(tokens.tenants, lastChoosenTenantId))
+                        {
+                            gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                            return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
+                        }
+                        
                         if($session.signin(tokens, conf.tenant))
                         {
-                            gv.set('_hd_auth_last_chosen_tenant_id', conf.tenant, false); //$session.configuration.refresh_token_persistent)
+                            gv.set('_hd_auth_last_chosen_tenant_id', conf.tenant, true); //$session.configuration.refresh_token_persistent)
                             return state;
                         }
                         else
@@ -295,9 +401,10 @@
                     }
                     else
                     {
-                        Internals.obtained_tokens_info = tokens;
+                        gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
                         return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
                     }
+                    */
                 }
 
                 if($session.signin(tokens))
@@ -318,7 +425,7 @@
         }
         catch (error)
         {
-            console.log("Error: ", error);
+            console.error(error);
             return "/#/auth/err?desc=" + encodeURIComponent(error.toString());
         }
     }

@@ -1,6 +1,6 @@
 import { Token } from "./Token"
 import { gv } from "./Storage";
-import { Configuration, Mode } from "./Configuration";
+import { Configuration, Mode, Local_user } from "./Configuration";
 import {Writable, writable} from 'svelte/store'
 
 export class User
@@ -12,6 +12,30 @@ export class User
     public email_verified   :boolean = false;
 }
 
+export class Header_info
+{
+    public  key:    string
+    public  value:  string
+}
+
+export class Tenant_info
+{
+    public  id:         string
+    public  url:        string
+    public  name:       string = ""
+    public  headers:    Header_info[] | undefined
+}
+
+export class App_instance_info
+{
+    public tenant_id:       string = ""
+    public name:            string = ""
+    public desc:            string = ""
+    public img:             string = ""
+    public is_public:       boolean = false;
+    public unauthorized_guest_allowed: boolean = false;
+
+}
 
 export class Session
 {
@@ -21,6 +45,8 @@ export class Session
     private     _id_token               :Token;
     private     _access_token           :Token;
     private     _refresh_token          :Token;
+
+    public      appInstanceInfo         :App_instance_info|null = null;
 
     public      configuration           :Configuration;
     
@@ -45,16 +71,46 @@ export class Session
                 this.configuration.scope            = cfg.remote.scope;
                 this.configuration.api_version      = cfg.remote.api_version ?? cfg.remote.apiVersion ?? "v001";
                 this.configuration.tenant           = cfg.remote.tenant ?? "";
+                this.configuration.groups_only      = cfg.remote.groupsOnly ?? cfg.remote.groups_only ?? false;
+                this.configuration.ask_organization_name = cfg.remote.ask_organization_name ?? cfg.remote.askOrganizationName ?? true
                 this.configuration.refresh_token_persistent  = cfg.remote.refresh_token_persistent ?? cfg.remote.refreshTokenPersistent ?? true;
                 this.configuration.terms_and_conditions_href = cfg.remote.terms_and_conditions_href ?? cfg.remote.termsAndConditionsHRef;    
                 this.configuration.privacy_policy_href       = cfg.remote.privacy_policy_href ?? cfg.remote.privacyPolicyHRef;
+                this.configuration.let_choose_group_first    = cfg.remote.let_choose_group_first ?? cfg.remote.letChooseGroupFirst ?? false; 
                 break;
 
             case 'local':
                 this.configuration.mode         = Mode.Local;
                 this.configuration.local_api    = cfg.local.api;
-                this.configuration.local_users  = [...cfg.local.users];
                 this.configuration.api_version  = cfg.local.api_version ?? cfg.local.apiVersion ?? "v001";
+
+                this.configuration.local_users = [];
+                if(cfg.local.users && Array.isArray(cfg.local.users))
+                {
+                    cfg.local.users.forEach(u => {
+                        switch(typeof u)
+                        {
+                        case 'string':
+                            {
+                                const user = new Local_user();
+                                user.username = u;
+                                this.configuration.local_users.push(user);
+                            }
+                            break;
+
+                        case 'object':
+                            {
+                                const user = new Local_user();
+                                user.username = u.username ?? "";
+                                user.role = u.role ?? "";
+                                user.groupId = u.groupId ?? 0;
+                                user.uid = u.uid ?? 0;
+                                this.configuration.local_users.push(user);
+                            }
+                            break;
+                        }
+                    });
+                }
                 break;
 
             case 'disabled':
@@ -163,6 +219,59 @@ export class Session
             return "";
     }
 
+    public get appId()  :string
+    {
+        let scopes = this.configuration.scope.split(' ')
+        if(!scopes.length)
+            return '';
+        
+        //remove predefined scopes
+        scopes = scopes.filter( s => (s!='openid') && (s!='profile') && (s!='email') && (s!='address') && (s!='phone'));
+        if(!scopes.length)
+            return '';
+
+        let app_id = scopes[0];
+        return app_id;
+    }
+
+    public get tenants():   Tenant_info[]
+    {
+        let res: string;
+        if(!gv.get("_hd_signedin_tenants", (v)=>{res=v;}))
+            return [];
+        if(!res)
+            return [];
+
+        const tenants : Tenant_info[] = JSON.parse(res);
+        return tenants;
+    }
+
+    public set tenants(infos: Tenant_info[])
+    {
+        const tInfos = JSON.stringify(infos)
+        gv.set("_hd_signedin_tenants", tInfos, false);
+    }
+
+    public get isUnauthorizedGuest() :boolean
+    {
+        let result: boolean = false;
+        
+        let res: string;
+        if(!gv.get("_hd_auth_unauthorized_guest", (v)=>{res=v;}))
+            result = false;
+        else if(res == "1")
+            result = true;
+        else
+            result = false;
+
+        return result;
+    }
+
+    public set isUnauthorizedGuest(val :boolean) 
+    {
+        gv.set("_hd_auth_unauthorized_guest", val ? "1" : "", true);
+    }
+
     protected validate() : void
     {
         if(!gv.get_num("_hd_auth_session_validation_ticket", (v) => {this.my_validation_ticket = v;}))
@@ -190,8 +299,7 @@ export class Session
 
         if(this.disabled)
         {
-            console.log('session disabled');
-            this.set_current_tenant_api(this.configuration.local_api, '')
+            this.setCurrentTenantAPI(this.configuration.local_api, '')
             this._is_active = true;
             return;
         }
@@ -199,21 +307,14 @@ export class Session
         {
             if(this.localDevCurrentUser)
             {
-                if(this.configuration.local_users.find( v => v==this.localDevCurrentUser))
-                {
-                    this._is_active = true;
-                }
-                else
-                {
-                    this._is_active = false;
-                }
+                this._is_active = true;
             }
             else
             {
                 this._is_active = false;
             }
 
-            this.set_current_tenant_api(this.configuration.local_api, '')
+            this.setCurrentTenantAPI(this.configuration.local_api, '')
             return;
         }
 
@@ -274,24 +375,29 @@ export class Session
         gv.set("_hd_auth_refresh_token", tokens_info.refresh_token, this.configuration.refresh_token_persistent);
 
         if(tokens_info.tenant != undefined)
-            this.set_current_tenant_api(tokens_info.tenant.url, tokens_info.tenant.id);
+        {
+            this.setCurrentTenantAPI(tokens_info.tenant.url, tokens_info.tenant.id);
+            this.tenants = [tokens_info.tenant];
+        }
         else if((tokens_info.tenants != undefined) && (tokens_info.tenants.length > 0))
         {
             if(tokens_info.tenants.length == 1)
-                this.set_current_tenant_api(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+                this.setCurrentTenantAPI(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
             else
             {
                 if(chosen_tenant_id)
                 {
                     const chosen_tenant = tokens_info.tenants.find( el => el.id == chosen_tenant_id)
                     if(chosen_tenant)
-                        this.set_current_tenant_api(chosen_tenant.url, chosen_tenant.id);
+                        this.setCurrentTenantAPI(chosen_tenant.url, chosen_tenant.id);
                     else
-                        this.set_current_tenant_api(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+                        this.setCurrentTenantAPI(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
                 }
                 else
-                    this.set_current_tenant_api(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+                    this.setCurrentTenantAPI(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
             }
+
+            this.tenants = tokens_info.tenants
         }
         else if((tokens_info.apps != undefined) && (tokens_info.apps.length > 0))
         {
@@ -324,10 +430,20 @@ export class Session
         this.my_validation_ticket = validation_ticket;
     }
 
-    protected set_current_tenant_api(url :string, tid :string) :void
+    public setCurrentTenantAPI(url :string, tid :string) :void
     {
         gv.set("_hd_auth_api_address", url);
         gv.set("_hd_auth_tenant", tid);
+        gv.set('_hd_auth_last_chosen_tenant_id', tid, true);
+    }
+
+    public get lastChosenTenantId() :string
+    {
+        let res;
+        if(!gv.get('_hd_auth_last_chosen_tenant_id', (v) => res=v))
+            return '';
+        
+        return res;
     }
 
     public signout() : void
@@ -338,8 +454,9 @@ export class Session
 
         gv.set("_hd_auth_api_address", "");
         gv.set("_hd_auth_tenant", "");
-
+       
         gv.set("_hd_auth_local_dev_user", "");
+        gv.set('_hd_auth_unauthorized_guest', "", true)
 
         this._id_token = null;
         this._access_token = null;
@@ -353,19 +470,67 @@ export class Session
         session.set(new_session);       // forces store subscribers
     }
 
-    public appAccessGroup() : number
+    public appAccessRole() : string
     {
         if(!this.configuration)
-            return 0;
+            return '';
         
         const scopes = this.configuration.scope.split(' ')
-        if(scopes && scopes.length > 0)
+        if((!scopes) || scopes.length == 0)
+            return '';
+
+        const appId = scopes[scopes.length-1];
+
+        if(!this.isActive)
+            return '';
+
+        const token: Token = this.accessToken;
+        if(token == undefined)
+            return '';
+
+        if(token == null)
+            return '';
+
+        if(!token.raw)
+            return '';
+
+        if(!token.is_jwt)
+            return '';
+
+        const access: object[] = token.payload['access'];
+
+        if( !!access && 
+            access.length > 0)
         {
-            const appId = scopes[scopes.length-1];
-            return this.accessGroup(appId);
+            const scopeIdx = access.findIndex(e => e['app'] == appId)
+            if(scopeIdx < 0)
+                return '';
+
+            const accessScope: object =  access[scopeIdx];
+
+            const scopeTenants = accessScope['tenants'];
+            if(!scopeTenants || scopeTenants.length == 0)
+                return '';
+
+            for(let i=0; i<scopeTenants.length; i++)
+            {
+                const tenantInfo = scopeTenants[i];
+                if(typeof tenantInfo === 'object' && tenantInfo !== null)
+                {
+                    if(tenantInfo['tid'] == this.tid)
+                    {
+                        if(!tenantInfo.details)
+                            return '';
+
+                        const accessDetails = JSON.parse(tenantInfo.details);
+                        return accessDetails.role ?? '';
+                    }
+                }
+            }
+            return '';
         }
         else
-            return 0;
+            return '';
     }
 
     public authAccessGroup() : number
@@ -518,8 +683,7 @@ export class Session
         //this.signout();
         this.mode = m;
 
-        //console.log('session, setup_mode', m)
-
+       
         if(m==Mode.Remote)
         {
             /*let org_api_addr :string;
@@ -536,15 +700,13 @@ export class Session
             {   
                 //gv.set("_hd_auth_org_api_address", '');  
                 //gv.set("_hd_auth_api_address", this.configuration.local_api);  
-                //this.set_current_tenant_api(this.configuration.local_api, '')
+                //this.setCurrentTenantAPI(this.configuration.local_api, '')
             }
         }
     }
 
     public setLocalDevCurrentUser(email :string)
     {
-        //console.log('set local user', email);
-
         gv.set('_hd_auth_local_dev_user', email);
 
         this.boost_validation_ticket();
@@ -556,12 +718,18 @@ export class Session
         
     }
 
-    public get localDevCurrentUser() :string
+    public get localDevCurrentUser() :Local_user
     {
         let email :string;
         gv.get('_hd_auth_local_dev_user', (v)=>{email=v;});
-        return email;
+
+        if(!email)
+            return null;
+
+        const foundUser = this.configuration.local_users.find(u => u.username == email)
+        return foundUser;
     }
+
 }
 
 export let session :Writable<Session> = writable(new Session);
