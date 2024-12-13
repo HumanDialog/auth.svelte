@@ -70,9 +70,11 @@
         }
         else if(automaticallyRefreshTokens)
         {
+            console.log('automaticallyRefreshTokens')
+
             if($session?.refreshToken?.raw)
             {
-                reef.refreshTokens().then((res) => show = CONTENT)
+                reef.refreshTokens().then((res) => {show = CONTENT; console.log('after automaticallyRefreshTokens: ', res)})
                 return WAITING;
             }
             else
@@ -82,6 +84,8 @@
         }
         else if(autoRedirectToSignIn)
         {
+            console.log('autoRedirectToSignIn')
+
             if(false && gid)
             {
                 gv.set('_hd_auth_last_chosen_tenant_id', gid, true);

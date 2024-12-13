@@ -168,14 +168,22 @@ export class reef {
     }
 
     public static async refreshTokens(): Promise<boolean> {
+        console.log('refreshTokens')
+
         let _session: Session = get(session);
 
         if (_session.refreshToken == null)
+        {
+            console.log('refreshToken is null')
             return false;
+        }
 
         let refresh_token: string = _session.refreshToken.raw;
         if (refresh_token == "")
+        {
+            console.log('refreshToken is empty')
             return false;
+        }
 
         
 
@@ -225,7 +233,10 @@ export class reef {
                             if (_session.signin(tokens))
                                 return true;
                             else
+                            {
+                                console.log('sign in failed on refreshing (1)')
                                 return false; 
+                            }
                         }
                     }
                     const lastChosenTenantId = _session.lastChosenTenantId;
@@ -239,16 +250,19 @@ export class reef {
                             }
                             else
                             {
+                                console.log('sign in failed on refreshing (2)')
                                 return false;
                             }
                         }
                         else
                         {
+                            console.log('sign in failed on refreshing (3)')
                             return false;
                         }
                     }
                     else
                     {
+                        console.log('sign in failed on refreshing (4)')
                         return false;
                     }
                 }
@@ -256,7 +270,10 @@ export class reef {
                 if (_session.signin(tokens))
                     return true;
                 else
+                {
+                    console.log('sign in failed on refreshing (5)')
                     return false;
+                }
             }
             else {
                 _session.signout();  // clean up session data
@@ -299,6 +316,9 @@ export class reef {
     }
 
     public static redirectToSignIn() {
+        
+        console.log('redirect to signin')
+        
         let current_path: string;
         current_path = window.location.href;
 
