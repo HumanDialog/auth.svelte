@@ -102,7 +102,7 @@ export class reef {
             return `/json/${apiver}/${path}`;
     }
 
-    public static async get(_path) {
+    public static async get(_path, onError) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
@@ -115,15 +115,23 @@ export class reef {
                     return JSON.parse(response_string);
             }
             else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
                 return null;
+            }
         }
         catch (err) {
             console.error(err);
+            if(onError)
+                onError(err)
             return null;
         }
     }
 
-    public static async post(_path, request_object) {
+    public static async post(_path, request_object, onError) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
@@ -139,15 +147,23 @@ export class reef {
                     return JSON.parse(response_string);
             }
             else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
                 return null;
+            }
         }
         catch (err) {
             console.error(err);
+            if(onError)
+                onError(err)
             return null;
         }
     }
 
-    public static async delete(_path) {
+    public static async delete(_path, onError) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
         try {
             let res = await reef.fetch(path, { method: 'DELETE' });
@@ -159,29 +175,33 @@ export class reef {
                     return JSON.parse(response_string);
             }
             else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
                 return null;
+            }
         }
         catch (err) {
             console.error(err);
+            if(onError)
+                onError(err)
             return null;
         }
     }
 
     public static async refreshTokens(): Promise<boolean> {
-        console.log('refreshTokens')
-
         let _session: Session = get(session);
 
         if (_session.refreshToken == null)
         {
-            console.log('refreshToken is null')
             return false;
         }
 
         let refresh_token: string = _session.refreshToken.raw;
         if (refresh_token == "")
         {
-            console.log('refreshToken is empty')
             return false;
         }
 
@@ -234,7 +254,6 @@ export class reef {
                                 return true;
                             else
                             {
-                                console.log('sign in failed on refreshing (1)')
                                 return false; 
                             }
                         }
@@ -250,19 +269,16 @@ export class reef {
                             }
                             else
                             {
-                                console.log('sign in failed on refreshing (2)')
                                 return false;
                             }
                         }
                         else
                         {
-                            console.log('sign in failed on refreshing (3)')
                             return false;
                         }
                     }
                     else
                     {
-                        console.log('sign in failed on refreshing (4)')
                         return false;
                     }
                 }
@@ -271,7 +287,6 @@ export class reef {
                     return true;
                 else
                 {
-                    console.log('sign in failed on refreshing (5)')
                     return false;
                 }
             }
@@ -317,8 +332,6 @@ export class reef {
 
     public static redirectToSignIn() {
         
-        console.log('redirect to signin')
-        
         let current_path: string;
         current_path = window.location.href;
 
@@ -335,7 +348,7 @@ export class reef {
         window.location.href = navto;
     }
 
-    public static async getAppInstanceInfo() : Promise<App_instance_info>
+    public static async getAppInstanceInfo(onError) : Promise<App_instance_info>
     {
         let _session: Session = get(session);
         if(_session.appInstanceInfo)
@@ -358,11 +371,19 @@ export class reef {
                 return response;
             }
             else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
                 return null;
+            }
         }
         catch(err)
         {
             console.error(err);
+            if(onError)
+                onError(err)
             return null;
         }
     }
