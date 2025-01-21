@@ -34,6 +34,15 @@ To install the package on your Svelte project type:\
                   // Optional. It should be given for a public tenant, to which anyone can register as a user
                   tenant:   "<PUBLIC_TENANT_ID>",   
                   
+                  // Optional. signing in user must be member of existing Group
+                  groupsOnly: false,  
+
+                  // Ask about organization name during signing up, default is true
+                  askOrganizationName: true,
+
+                  // When user is member of multiple groups/tenants in the application, this parameter allows to select one of them
+                  letChooseGroupFirst: false,
+                  
                   
                   // Used only for signup form. Optional. 
                   // If specified checkboxes on consents are presented
@@ -43,10 +52,25 @@ To install the package on your Svelte project type:\
               local: {
                 api: "http://localhost:1996",
                 apiVersion: "v002",
+
+                // declare local developement users in simple form:
                 users: [
                     "bob@example.com",
                     "alice@example.com"
-                ]
+                ],
+                // or in more verbose way to declare access role and group:
+                users: [
+                    {
+                        username: 'bob@example.com',
+                        role: 'Developer',
+                        groupId: 11
+                    },
+                    {
+                        username: 'alice@example.com',
+                        role: 'Employee',
+                        groupId: 11
+                    }
+                ] 
               }
             })
 ```
@@ -181,8 +205,11 @@ Returns tenant API address
 #### `$session.tid :string`
 Returns tenant id
 
-#### `$session.appAccessGroup() :number`
-Returns application users group id of signed-in user. The returned value and meaning depends on the specific application.
+#### `$session.tenants :object[]`
+Returns all tenants infos where user is signed in
+
+#### `$session.appAccessRole() :string`
+Returns application access role of signed-in user. The returned value and meaning depends on the specific application.
 
 #### `$session.authAccessGroup() :number`
 Returns Identity Provider users group id of signed-in user. The possible values are a combination of the following bits:

@@ -1,5 +1,5 @@
-import { session, Session } from "./Session";
-import type { Configuration } from "./Configuration";
+import { session, Session, App_instance_info } from "./Session";
+import type { Configuration, Local_user } from "./Configuration";
 import { derived, readable, get } from "svelte/store";
 import { gv } from "./Storage";
 
@@ -51,9 +51,36 @@ export class reef {
                 }
 
                 options.headers.append("Authorization", "Bearer " + _session.accessToken.raw);
+
             }
-            else if (_session.localDevCurrentUser) {
-                options.headers.append('X-Reef-As-User', _session.localDevCurrentUser)
+            else
+            {
+                const user: Local_user = _session.localDevCurrentUser;
+                if (user) 
+                {
+                    if(user.uid > 0)
+                        options.headers.append('X-Reef-User-Id', user.uid)
+                    else
+                        options.headers.append('X-Reef-As-User', user.username)
+
+                    if(user.role)
+                        options.headers.append('X-Reef-Access-Role', user.role)
+
+                    if(user.groupId)
+                        options.headers.append('X-Reef-Group-Id', user.groupId)
+                }
+            } 
+            
+        }
+
+        if(_session.tenants.length > 0)
+        {
+            const tenantInfo = _session.tenants.find(t => t.id == _session.tid);
+            if(tenantInfo && tenantInfo.headers && tenantInfo.headers.length > 0)
+            {
+                tenantInfo.headers.forEach( h =>
+                    options.headers.append(h.key, h.value)
+                )
             }
         }
 
@@ -75,7 +102,7 @@ export class reef {
             return `/json/${apiver}/${path}`;
     }
 
-    public static async get(_path) {
+    public static async get(_path, onError) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
@@ -88,15 +115,23 @@ export class reef {
                     return JSON.parse(response_string);
             }
             else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
                 return null;
+            }
         }
         catch (err) {
             console.error(err);
+            if(onError)
+                onError(err)
             return null;
         }
     }
 
-    public static async post(_path, request_object) {
+    public static async post(_path, request_object, onError) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
@@ -112,15 +147,23 @@ export class reef {
                     return JSON.parse(response_string);
             }
             else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
                 return null;
+            }
         }
         catch (err) {
             console.error(err);
+            if(onError)
+                onError(err)
             return null;
         }
     }
 
-    public static async delete(_path) {
+    public static async delete(_path, onError) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
         try {
             let res = await reef.fetch(path, { method: 'DELETE' });
@@ -132,10 +175,18 @@ export class reef {
                     return JSON.parse(response_string);
             }
             else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
                 return null;
+            }
         }
         catch (err) {
             console.error(err);
+            if(onError)
+                onError(err)
             return null;
         }
     }
@@ -144,13 +195,17 @@ export class reef {
         let _session: Session = get(session);
 
         if (_session.refreshToken == null)
+        {
             return false;
+        }
 
         let refresh_token: string = _session.refreshToken.raw;
         if (refresh_token == "")
+        {
             return false;
+        }
 
-        //console.log("refreshing tokens..");
+        
 
         let conf: Configuration = _session.configuration;
         let data = new URLSearchParams();
@@ -158,6 +213,12 @@ export class reef {
         data.append("refresh_token", refresh_token);
         data.append("client_id", conf.client_id);
         data.append("scope", conf.scope);
+        
+        if(conf.tenant)
+            data.append("tenant",   conf.tenant);
+
+        if(conf.groups_only)
+            data.append("groups_only", "true");
 
         try {
             const res = await fetch(conf.iss + "/auth/token",
@@ -175,21 +236,59 @@ export class reef {
             if (res.ok) {
                 let tokens = await res.json();
 
-                if (tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1) {
-                    let tenant_id;
-                    if (!gv.get("_hd_auth_last_chosen_tenant_id", (v) => { tenant_id = v; }))
-                        tenant_id = tokens.tenants[tokens.tenants.length - 1].id;
+                if (tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1) 
+                {
+                    if(conf.tenant)         // do we have global tenant specified?
+                    {
+                        let filteredTenants = []
+                        if(conf.groups_only)
+                            filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant + '/'))
+                        else
+                            filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant))
+                        
+                        tokens.tenants = [...filteredTenants];
 
-                    if (_session.signin(tokens, tenant_id))
-                        return true;
+                        if( tokens.tenants.length == 1)
+                        {
+                            if (_session.signin(tokens))
+                                return true;
+                            else
+                            {
+                                return false; 
+                            }
+                        }
+                    }
+                    const lastChosenTenantId = _session.lastChosenTenantId;
+                    if(lastChosenTenantId)
+                    {
+                        if(tokens.tenants.some(t => t.id == lastChosenTenantId))       // is last used included 
+                        {
+                            if(_session.signin(tokens, lastChosenTenantId))
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
                     else
+                    {
                         return false;
+                    }
                 }
 
                 if (_session.signin(tokens))
                     return true;
                 else
+                {
                     return false;
+                }
             }
             else {
                 _session.signout();  // clean up session data
@@ -232,10 +331,10 @@ export class reef {
     }
 
     public static redirectToSignIn() {
+        
         let current_path: string;
         current_path = window.location.href;
 
-        //console.log('auth, location.pathname', window.location.pathname)
         let navto: string = window.location.pathname;
         if (!navto)
             navto = '/';
@@ -245,9 +344,48 @@ export class reef {
 
         navto += "#/auth/signin?redirect=" + encodeURIComponent(current_path);
 
-        //console.log('auth, navto', navto)
         //await tick();
         window.location.href = navto;
+    }
+
+    public static async getAppInstanceInfo(onError) : Promise<App_instance_info>
+    {
+        let _session: Session = get(session);
+        if(_session.appInstanceInfo)
+            return _session.appInstanceInfo;
+
+        if(!_session.configuration.tenant)
+            return null;
+
+        let app_id = _session.appId
+        if(!app_id)
+            return null;
+      
+        try
+        {
+            const res = await reef.fetch(`/dev/get-tenant-info?app_id=${app_id}&tenant_id=${_session.configuration.tenant}`)
+            if(res.ok)
+            {
+                let response = await res.json();
+                _session.appInstanceInfo = response;
+                return response;
+            }
+            else
+            {
+                const err = await res.text()
+                console.error(err)
+                if(onError)
+                    onError(err)
+                return null;
+            }
+        }
+        catch(err)
+        {
+            console.error(err);
+            if(onError)
+                onError(err)
+            return null;
+        }
     }
 
     public static locationChanged(...args) {
@@ -259,7 +397,6 @@ export class reef {
 }
 
 function get_location() {
-    //console.log('set location:', window.location.href)
     const href = window.location.href;
     const hashPosition = href.indexOf('#/')
     let base_address = window.location.pathname;
