@@ -3,6 +3,8 @@ import type { Configuration, Local_user } from "./Configuration";
 import { derived, readable, get } from "svelte/store";
 import { gv } from "./Storage";
 
+const s = session;
+
 export class reef {
     public static configure(cfg) {
         let _session: Session = get(session);

@@ -1,5 +1,5 @@
 import { Token } from "./Token"
-import { gv } from "./Storage";
+import { gv, type Browser_storage } from "./Storage";
 import { Configuration, Mode, Local_user } from "./Configuration";
 import {Writable, writable} from 'svelte/store'
 
@@ -46,13 +46,15 @@ export class Session
     private     _access_token           :Token;
     private     _refresh_token          :Token;
 
+    private     storage                 :Browser_storage;
+
     public      appInstanceInfo         :App_instance_info|null = null;
 
     public      configuration           :Configuration;
     
-    constructor()
+    constructor(storage: Browser_storage)
     {
-        
+        this.storage = storage;
     }
 
     public configure(cfg, internal=false)
@@ -129,12 +131,12 @@ export class Session
 
         if(!internal)
         {
-            gv.set('_hd_auth_cfg', JSON.stringify(cfg))
+            this.storage.set('_hd_auth_cfg', JSON.stringify(cfg))
 
             if(this.isValid)  
                 this.boost_validation_ticket();
             
-            let new_session :Session = new Session();
+            let new_session :Session = new Session(this.storage);
             new_session.clone_from(this);
             session.set(new_session);       // forces store subscribers
         }
@@ -194,7 +196,7 @@ export class Session
     public get isValid() :boolean
     {
         let ticket :number;
-        if(!gv.get_num("_hd_auth_session_validation_ticket", (v) => {ticket = v;}))
+        if(!this.storage.get_num("_hd_auth_session_validation_ticket", (v) => {ticket = v;}))
             return false;
 
         return (ticket == this.my_validation_ticket);
@@ -203,7 +205,7 @@ export class Session
     public get apiAddress()    :string
     {
         let res :string;
-        if(gv.get("_hd_auth_api_address", (v)=>{res=v;}))
+        if(this.storage.get("_hd_auth_api_address", (v)=>{res=v;}))
             return res;
         else
             return "";
@@ -213,7 +215,7 @@ export class Session
     public get tid()    :string
     {
         let res :string;
-        if(gv.get("_hd_auth_tenant", (v)=>{res=v;}))
+        if(this.storage.get("_hd_auth_tenant", (v)=>{res=v;}))
             return res;
         else
             return "";
@@ -237,7 +239,7 @@ export class Session
     public get tenants():   Tenant_info[]
     {
         let res: string;
-        if(!gv.get("_hd_signedin_tenants", (v)=>{res=v;}))
+        if(!this.storage.get("_hd_signedin_tenants", (v)=>{res=v;}))
             return [];
         if(!res)
             return [];
@@ -249,7 +251,7 @@ export class Session
     public set tenants(infos: Tenant_info[])
     {
         const tInfos = JSON.stringify(infos)
-        gv.set("_hd_signedin_tenants", tInfos, false);
+        this.storage.set("_hd_signedin_tenants", tInfos, false);
     }
 
     public get isUnauthorizedGuest() :boolean
@@ -257,7 +259,7 @@ export class Session
         let result: boolean = false;
         
         let res: string;
-        if(!gv.get("_hd_auth_unauthorized_guest", (v)=>{res=v;}))
+        if(!this.storage.get("_hd_auth_unauthorized_guest", (v)=>{res=v;}))
             result = false;
         else if(res == "1")
             result = true;
@@ -269,21 +271,21 @@ export class Session
 
     public set isUnauthorizedGuest(val :boolean) 
     {
-        gv.set("_hd_auth_unauthorized_guest", val ? "1" : "", true);
+        this.storage.set("_hd_auth_unauthorized_guest", val ? "1" : "", true);
     }
 
     protected validate() : void
     {
-        if(!gv.get_num("_hd_auth_session_validation_ticket", (v) => {this.my_validation_ticket = v;}))
+        if(!this.storage.get_num("_hd_auth_session_validation_ticket", (v) => {this.my_validation_ticket = v;}))
         {
             this.my_validation_ticket = 1;
-            gv.set_num("_hd_auth_session_validation_ticket", this.my_validation_ticket);
+            this.storage.set_num("_hd_auth_session_validation_ticket", this.my_validation_ticket);
         }
 
         if(!this.configuration)
         {
             let cfg_json;
-            if(gv.get('_hd_auth_cfg', (v) => cfg_json = v))
+            if(this.storage.get('_hd_auth_cfg', (v) => cfg_json = v))
             {
                 try
                 {
@@ -321,7 +323,7 @@ export class Session
         this._is_active = false;
 
         let token :string;
-        if(gv.get("_hd_auth_id_token", (v) => {token=v;}))
+        if(this.storage.get("_hd_auth_id_token", (v) => {token=v;}))
         {
             this._id_token = new Token(token);
             this._user = new User();
@@ -335,13 +337,13 @@ export class Session
             this._id_token = null;
 
 
-        if(gv.get("_hd_auth_access_token", (v) => {token=v;}))
+        if(this.storage.get("_hd_auth_access_token", (v) => {token=v;}))
             this._access_token = new Token(token);
         else
             this._access_token = null;
 
 
-        if(gv.get("_hd_auth_refresh_token", (v) => {token=v;}))
+        if(this.storage.get("_hd_auth_refresh_token", (v) => {token=v;}))
             this._refresh_token = new Token(token, false);
         else
             this._refresh_token = null;
@@ -370,9 +372,9 @@ export class Session
             return true;
         }
 
-        gv.set("_hd_auth_access_token", tokens_info.access_token);
-        gv.set("_hd_auth_id_token", tokens_info.id_token);
-        gv.set("_hd_auth_refresh_token", tokens_info.refresh_token, this.configuration.refresh_token_persistent);
+        this.storage.set("_hd_auth_access_token", tokens_info.access_token);
+        this.storage.set("_hd_auth_id_token", tokens_info.id_token);
+        this.storage.set("_hd_auth_refresh_token", tokens_info.refresh_token, this.configuration.refresh_token_persistent);
 
         if(tokens_info.tenant != undefined)
         {
@@ -414,7 +416,7 @@ export class Session
         this.boost_validation_ticket();
         this.validate();
 
-        let new_session :Session = new Session();
+        let new_session :Session = new Session(this.storage);
         new_session.clone_from(this);
         session.set(new_session);       // forces store subscribers
         
@@ -424,23 +426,23 @@ export class Session
     protected boost_validation_ticket() :void
     {
         let validation_ticket :number = 0;
-        gv.get_num("_hd_auth_session_validation_ticket", (v) => {validation_ticket = v;});
+        this.storage.get_num("_hd_auth_session_validation_ticket", (v) => {validation_ticket = v;});
         validation_ticket++;
-        gv.set_num("_hd_auth_session_validation_ticket", validation_ticket);
+        this.storage.set_num("_hd_auth_session_validation_ticket", validation_ticket);
         this.my_validation_ticket = validation_ticket;
     }
 
     public setCurrentTenantAPI(url :string, tid :string) :void
     {
-        gv.set("_hd_auth_api_address", url);
-        gv.set("_hd_auth_tenant", tid);
-        gv.set('_hd_auth_last_chosen_tenant_id', tid, true);
+        this.storage.set("_hd_auth_api_address", url);
+        this.storage.set("_hd_auth_tenant", tid);
+        this.storage.set('_hd_auth_last_chosen_tenant_id', tid, true);
     }
 
     public get lastChosenTenantId() :string
     {
         let res;
-        if(!gv.get('_hd_auth_last_chosen_tenant_id', (v) => res=v))
+        if(!this.storage.get('_hd_auth_last_chosen_tenant_id', (v) => res=v))
             return '';
         
         return res;
@@ -448,15 +450,15 @@ export class Session
 
     public signout() : void
     {
-        gv.set("_hd_auth_id_token", "");
-        gv.set("_hd_auth_access_token", "");
-        gv.set("_hd_auth_refresh_token", "", this.configuration.refresh_token_persistent);
+        this.storage.set("_hd_auth_id_token", "");
+        this.storage.set("_hd_auth_access_token", "");
+        this.storage.set("_hd_auth_refresh_token", "", this.configuration.refresh_token_persistent);
 
-        gv.set("_hd_auth_api_address", "");
-        gv.set("_hd_auth_tenant", "");
+        this.storage.set("_hd_auth_api_address", "");
+        this.storage.set("_hd_auth_tenant", "");
        
-        gv.set("_hd_auth_local_dev_user", "");
-        gv.set('_hd_auth_unauthorized_guest', "", true)
+        this.storage.set("_hd_auth_local_dev_user", "");
+        this.storage.set('_hd_auth_unauthorized_guest', "", true)
 
         this._id_token = null;
         this._access_token = null;
@@ -465,7 +467,7 @@ export class Session
 
         this.boost_validation_ticket();
 
-        let new_session :Session = new Session();
+        let new_session :Session = new Session(this.storage);
         new_session.clone_from(this);
         session.set(new_session);       // forces store subscribers
     }
@@ -624,7 +626,7 @@ export class Session
     public get mode() :Mode
     {
         let num_mode :number = 0;
-        if(!gv.get_num('_hd_auth_session_mode', (v) => { num_mode = v; }))
+        if(!this.storage.get_num('_hd_auth_session_mode', (v) => { num_mode = v; }))
             return Mode.Remote;
         else switch(num_mode)
         {
@@ -647,15 +649,15 @@ export class Session
         switch(m)
         {
         case Mode.Remote:
-            gv.set_num("_hd_auth_session_mode", 0);
+            this.storage.set_num("_hd_auth_session_mode", 0);
             break;
 
         case Mode.Local:
-            gv.set_num("_hd_auth_session_mode", 1);
+            this.storage.set_num("_hd_auth_session_mode", 1);
             break;
 
         case Mode.Disabled:
-            gv.set_num("_hd_auth_session_mode", 2);
+            this.storage.set_num("_hd_auth_session_mode", 2);
             break;
         }
 
@@ -687,10 +689,10 @@ export class Session
         if(m==Mode.Remote)
         {
             /*let org_api_addr :string;
-            if(gv.get("_hd_auth_org_api_address", (v)=>{org_api_addr=v;}))
+            if(this.storage.get("_hd_auth_org_api_address", (v)=>{org_api_addr=v;}))
             {
-                gv.set("_hd_auth_api_address", org_api_addr);
-                gv.set("_hd_auth_org_api_address", '');  
+                this.storage.set("_hd_auth_api_address", org_api_addr);
+                this.storage.set("_hd_auth_org_api_address", '');  
             }
             */
         }
@@ -698,8 +700,8 @@ export class Session
         {
             if(this.configuration && this.configuration.local_api)
             {   
-                //gv.set("_hd_auth_org_api_address", '');  
-                //gv.set("_hd_auth_api_address", this.configuration.local_api);  
+                //this.storage.set("_hd_auth_org_api_address", '');  
+                //this.storage.set("_hd_auth_api_address", this.configuration.local_api);  
                 //this.setCurrentTenantAPI(this.configuration.local_api, '')
             }
         }
@@ -707,12 +709,12 @@ export class Session
 
     public setLocalDevCurrentUser(email :string)
     {
-        gv.set('_hd_auth_local_dev_user', email);
+        this.storage.set('_hd_auth_local_dev_user', email);
 
         this.boost_validation_ticket();
         this.validate();
 
-        let new_session :Session = new Session();
+        let new_session :Session = new Session(this.storage);
         new_session.clone_from(this);
         session.set(new_session);       // forces store subscribers
         
@@ -721,7 +723,7 @@ export class Session
     public get localDevCurrentUser() :Local_user
     {
         let email :string;
-        gv.get('_hd_auth_local_dev_user', (v)=>{email=v;});
+        this.storage.get('_hd_auth_local_dev_user', (v)=>{email=v;});
 
         if(!email)
             return null;
@@ -732,4 +734,4 @@ export class Session
 
 }
 
-export let session :Writable<Session> = writable(new Session);
+export const session :Writable<Session> = writable(new Session(gv));

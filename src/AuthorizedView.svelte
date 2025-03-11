@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { session } from "./Session";
+    import { session as _session} from "./Session";
     import {_hd_auth_location, _hd_auth_querystring, reef} from './Auth'
     import Authorize from "./Authorize.svelte";
     import LocalAuthorize from "./LocalAuthorize.svelte"
@@ -16,6 +16,9 @@
     const AUTHORIZE = 2;
     const CHOOSE_TENANT = 3;
     const CONTENT = 4;
+
+    const storage = gv;
+    const session = _session;
 
     $: show = what_to_show($session, $_hd_auth_location);
 
@@ -52,7 +55,7 @@
         {
             if(false && gid && $session.tid != gid)
             {
-                gv.set('_hd_auth_last_chosen_tenant_id', gid, true);
+                storage.set('_hd_auth_last_chosen_tenant_id', gid, true);
 
                 const tInfo = $session.tenants.find(t => t.id == gid)
                 if(tInfo)
@@ -84,7 +87,7 @@
         {
             if(false && gid)
             {
-                gv.set('_hd_auth_last_chosen_tenant_id', gid, true);
+                storage.set('_hd_auth_last_chosen_tenant_id', gid, true);
             }
             
             setTimeout( () => reef.redirectToSignIn(), 100);

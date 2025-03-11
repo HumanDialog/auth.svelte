@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { session } from "./Session";
+    import { session as _session } from "./Session";
+
+    const session = _session;
 </script>
 
 {#if $session.isActive || $session.isUnauthorizedGuest}

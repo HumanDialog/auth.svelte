@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { session } from "./Session";
+    import { session as _session} from "./Session";
     import {_hd_auth_location, _hd_auth_querystring} from "./Auth"
     import {tick} from 'svelte'
     
 
     let redirect :string = "";
+    const session = _session;
 
     $:
     {
