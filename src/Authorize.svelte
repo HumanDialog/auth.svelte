@@ -184,6 +184,12 @@
         result += "&code_challenge=" + code_challenge;
         result += "&code_challenge_method=S256";
         result += "&state="+ encodeURIComponent(redirection_after_signin);
+
+        if(conf.terms_and_conditions_href)
+            result += "&terms=" + encodeURIComponent(conf.terms_and_conditions_href);
+
+        if(conf.privacy_policy_href)
+            result += "&privacy=" + encodeURIComponent(conf.privacy_policy_href); 
         
         return result;
     }
@@ -204,6 +210,9 @@
 
         if(conf.ask_organization_name)
             result += "&org_name=true"
+
+        if(conf.groups_only)
+            result += "&groups_only=true"
 
         let code_verfier :string = push_code_verifier();
         let code_challenge :string = await get_code_challenge(code_verfier);
