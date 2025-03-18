@@ -196,18 +196,20 @@ export class reef {
     public static async refreshTokens(): Promise<boolean> {
         let _session: Session = get(session);
 
+        console.log('refreshTokens')
+
         if (_session.refreshToken == null)
         {
+            console.log('refreshToken is null')
             return false;
         }
 
         let refresh_token: string = _session.refreshToken.raw;
         if (refresh_token == "")
         {
+            console.log('refreshToken is empty')
             return false;
         }
-
-        
 
         let conf: Configuration = _session.configuration;
         let data = new URLSearchParams();
@@ -236,6 +238,8 @@ export class reef {
                 });
 
             if (res.ok) {
+                console.log('/auth/token 200 OK')
+
                 let tokens = await res.json();
 
                 if (tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1) 
@@ -256,6 +260,7 @@ export class reef {
                                 return true;
                             else
                             {
+                                console.log("Can't signin (1)", tokens)
                                 return false; 
                             }
                         }
@@ -271,16 +276,19 @@ export class reef {
                             }
                             else
                             {
+                                console.log("Can't signin (2)", tokens)
                                 return false;
                             }
                         }
                         else
                         {
+                            console.log("Can't signin (3)", lastChosenTenantId)
                             return false;
                         }
                     }
                     else
                     {
+                        console.log("Can't signin (4)")
                         return false;
                     }
                 }
@@ -289,6 +297,7 @@ export class reef {
                     return true;
                 else
                 {
+                    console.log("Can't signin (5)", tokens)
                     return false;
                 }
             }
@@ -333,6 +342,8 @@ export class reef {
     }
 
     public static redirectToSignIn() {
+        
+        console.log('redirectToSignIn')
         
         let current_path: string;
         current_path = window.location.href;

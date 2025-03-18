@@ -75,7 +75,24 @@
         {
             if($session?.refreshToken?.raw)
             {
-                reef.refreshTokens().then((res) => {show = CONTENT; })
+                reef.refreshTokens().then((res) => 
+                {
+                    if(!res)
+                    {
+                        if(autoRedirectToSignIn)  
+                            setTimeout( () => reef.redirectToSignIn(), 100);
+                        else
+                        {
+                            $session.signout();
+                            setTimeout( () => {window.location.href = '/'}, 100);
+                        }
+                    }
+                    else
+                    {
+                        show = CONTENT; 
+                    }
+                })
+
                 return WAITING;
             }
             else

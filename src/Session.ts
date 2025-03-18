@@ -416,11 +416,29 @@ export class Session
         this.boost_validation_ticket();
         this.validate();
 
+        this.checkServerAndClientTimeMismatch();
+
         let new_session :Session = new Session(this.storage);
         new_session.clone_from(this);
         session.set(new_session);       // forces store subscribers
         
         return true;
+    }
+
+    protected checkServerAndClientTimeMismatch() :void
+    {
+        if(!this._access_token)
+            return;
+
+        const serverTime = this._access_token.get_claim<number>("iat");
+        if(!serverTime)
+            return;
+
+        const clientTime = Math.floor(Date.now() / 1000);
+        const timeShift = clientTime - serverTime;
+        
+        // now just logging. In the near future we need to store this value and use on Token::not_expired property
+        console.log('Server/Client time mismatch: ', timeShift);
     }
 
     protected boost_validation_ticket() :void
