@@ -51,14 +51,23 @@ export class Session
     public      appInstanceInfo         :App_instance_info|null = null;
 
     public      configuration           :Configuration;
+    public      sessionId               :string
     
     constructor(storage: Browser_storage)
     {
         this.storage = storage;
+        
+        let arr = new Uint8Array((16) / 2)
+        window.crypto.getRandomValues(arr)
+
+        const dec2hex = (dec)=> dec.toString(16).padStart(2, "0")
+        this.sessionId = Array.from(arr, dec2hex).join('')
     }
 
     public configure(cfg, internal=false)
     {
+        console.log('configure', 'internal', internal, cfg)
+        
         this.configuration = new Configuration;
 
         if(cfg)
@@ -276,6 +285,8 @@ export class Session
 
     protected validate() : void
     {
+        console.log('auth: session validate')
+
         if(!this.storage.get_num("_hd_auth_session_validation_ticket", (v) => {this.my_validation_ticket = v;}))
         {
             this.my_validation_ticket = 1;
@@ -350,6 +361,93 @@ export class Session
 
         if((this._access_token != null) || (this._id_token != null))
             this._is_active = true;
+    }
+
+    public checkStorageConsistency(): boolean
+    {
+        let result: boolean = false
+        result = result || this.checkStoredKey('_hd_auth_cfg')
+        result = result || this.checkStoredKey('_hd_signedin_tenants')
+        result = result || this.checkStoredKey('_hd_auth_id_token')
+        result = result || this.checkStoredKey('_hd_auth_access_token')
+        result = result || this.checkStoredKey('_hd_auth_refresh_token')
+        result = result || this.checkStoredKey('_hd_auth_api_address')
+        result = result || this.checkStoredKey('_hd_auth_tenant')
+        result = result || this.checkStoredKey('_hd_auth_last_chosen_tenant_id')
+        result = result || this.checkStoredKey('_hd_auth_session_validation_ticket')
+
+        return !result;
+    }
+
+    private checkStoredKey(key: string): boolean
+    {
+        let val;
+        this.storage.get(key, (v) => val=v)
+        if(!val)
+        {
+            console.log('checkStorageConsistency ', key, ' empty')
+            return false;
+        }
+        return true;
+    }
+
+    public refreshTokens(tokens_info, chosen_tenant_id = undefined): boolean
+    {
+        if(!tokens_info.access_token)
+            return false;
+    
+        if(!tokens_info.id_token)
+            return false;
+            
+        if(!tokens_info.refresh_token)
+            return false;
+
+        this.storage.set("_hd_auth_id_token", tokens_info.id_token);
+        this.storage.set("_hd_auth_access_token", tokens_info.access_token);
+        this.storage.set("_hd_auth_refresh_token", tokens_info.refresh_token, this.configuration.refresh_token_persistent);
+
+        this._id_token = new Token(tokens_info.id_token);
+        this._user = new User();
+        this._user.given_name       = this._id_token.get_claim<string>("given_name");
+        this._user.family_name      = this._id_token.get_claim<string>("family_name");
+        this._user.picture          = this._id_token.get_claim<string>("picture");
+        this._user.email            = this._id_token.get_claim<string>("email");
+        this._user.email_verified   = this._id_token.get_claim<boolean>("email_verified");
+
+        this._access_token = new Token(tokens_info.access_token);
+        this._refresh_token = new Token(tokens_info.refresh_token, false); 
+        this._is_active = true;
+
+        if(tokens_info.tenant != undefined)
+        {
+            this.setCurrentTenantAPI(tokens_info.tenant.url, tokens_info.tenant.id);
+            this.tenants = [tokens_info.tenant];
+        }
+        else if((tokens_info.tenants != undefined) && (tokens_info.tenants.length > 0))
+        {
+            if(tokens_info.tenants.length == 1)
+                this.setCurrentTenantAPI(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+            else
+            {
+                if(chosen_tenant_id)
+                {
+                    const chosen_tenant = tokens_info.tenants.find( el => el.id == chosen_tenant_id)
+                    if(chosen_tenant)
+                        this.setCurrentTenantAPI(chosen_tenant.url, chosen_tenant.id);
+                    else
+                        this.setCurrentTenantAPI(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+                }
+                else
+                    this.setCurrentTenantAPI(tokens_info.tenants[0].url, tokens_info.tenants[0].id);
+            }
+
+            this.tenants = tokens_info.tenants
+        }
+        else
+            return false;
+
+
+        return true;
     }
 
     public signin(tokens_info, chosen_tenant_id = undefined) :boolean
@@ -477,6 +575,7 @@ export class Session
        
         this.storage.set("_hd_auth_local_dev_user", "");
         this.storage.set('_hd_auth_unauthorized_guest', "", true)
+        this.storage.set("_hd_signedin_tenants", "");
 
         this._id_token = null;
         this._access_token = null;

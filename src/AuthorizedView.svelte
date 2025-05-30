@@ -75,6 +75,7 @@
         {
             if($session?.refreshToken?.raw)
             {
+                console.log('sessionId 2:', $session.sessionId)
                 reef.refreshTokens().then((res) => 
                 {
                     if(!res)
