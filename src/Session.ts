@@ -365,18 +365,18 @@ export class Session
 
     public checkStorageConsistency(): boolean
     {
-        let result: boolean = false
-        result = result || this.checkStoredKey('_hd_auth_cfg')
-        result = result || this.checkStoredKey('_hd_signedin_tenants')
-        result = result || this.checkStoredKey('_hd_auth_id_token')
-        result = result || this.checkStoredKey('_hd_auth_access_token')
-        result = result || this.checkStoredKey('_hd_auth_refresh_token')
-        result = result || this.checkStoredKey('_hd_auth_api_address')
-        result = result || this.checkStoredKey('_hd_auth_tenant')
-        result = result || this.checkStoredKey('_hd_auth_last_chosen_tenant_id')
-        result = result || this.checkStoredKey('_hd_auth_session_validation_ticket')
+        let error: boolean = false
+        error = this.checkStoredKey('_hd_auth_cfg') || error
+        error = this.checkStoredKey('_hd_signedin_tenants') || error
+        error = this.checkStoredKey('_hd_auth_id_token') || error
+        error = this.checkStoredKey('_hd_auth_access_token') || error
+        error = this.checkStoredKey('_hd_auth_refresh_token') || error
+        error = this.checkStoredKey('_hd_auth_api_address') || error
+        error = this.checkStoredKey('_hd_auth_tenant') || error
+        error = this.checkStoredKey('_hd_auth_last_chosen_tenant_id') || error
+        error = this.checkStoredKey('_hd_auth_session_validation_ticket') || error
 
-        return !result;
+        return !error;
     }
 
     private checkStoredKey(key: string): boolean
@@ -386,9 +386,9 @@ export class Session
         if(!val)
         {
             console.log('checkStorageConsistency ', key, ' empty')
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     public refreshTokens(tokens_info, chosen_tenant_id = undefined): boolean

@@ -363,9 +363,7 @@ export class reef {
             }
             else {
                 _session.signout();  // clean up session data
-
-                let err = await res.json();
-                console.error(err.error, err.error_description);
+                res.json().then((err) => console.log('refreshing tokens not succees: ', err.error, err.error_description))
                 return false;
             }
         }

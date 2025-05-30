@@ -69,7 +69,9 @@
                 }
                 else
                 {
-                    let session_refreshed_successfully :boolean = await reef.refreshTokens();
+                    let session_refreshed_successfully :boolean = false;
+                    if($session?.refreshToken?.raw)
+                        session_refreshed_successfully =  await reef.refreshTokens();
                     
                     if(session_refreshed_successfully)
                     {
