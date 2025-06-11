@@ -4,7 +4,7 @@
     import {reef, _hd_auth_location, _hd_auth_querystring, _hd_auth_base_address} from "./Auth"
     import type { Configuration } from "./Configuration";
     import {Internals} from './internals'
-    import { tick } from "svelte";
+    import { tick, getContext, hasContext } from "svelte";
     
     //export let params = {}
 
@@ -15,6 +15,14 @@
     let asGuest     :boolean = false;
 
     let err_msg     :string = "";
+
+    let normalTextClass :string = ''
+    if(hasContext('__hd_auth_normal_text_class'))
+        normalTextClass = getContext('__hd_auth_normal_text_class')
+
+    let errorTextClass :string = 'text-red-800'
+    if(hasContext('__hd_auth_error_text_class'))
+        errorTextClass = getContext('__hd_auth_error_text_class')
 
     const storage = gv;
     const session = _session;
@@ -447,7 +455,7 @@
 </script>
 
 {#if err_msg.length > 0}
-    <p class="text-red-800">Error: {err_msg}</p>
+    <p class="{errorTextClass}">Error: {err_msg}</p>
 {:else}
-    <p>Redirecting..</p>
+    <p class="{normalTextClass}">Redirecting..</p>
 {/if}

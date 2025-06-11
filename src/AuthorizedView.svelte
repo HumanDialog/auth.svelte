@@ -5,11 +5,18 @@
     import LocalAuthorize from "./LocalAuthorize.svelte"
     import ChooseTenant from "./ChooseTenant.svelte";
     import {gv} from "./Storage"
+    import {getContext, setContext} from 'svelte'
 
     export let   isDisabled   :boolean = false;
     export let   automaticallyRefreshTokens :boolean = false;
     export let   autoRedirectToSignIn :boolean = true;
     export let   optionalGuestMode  :boolean = false;
+
+    export let   layoutTheme: string = ''
+    export let   layoutClass: string = ''
+    export let   buttonClass: string = ''
+    export let   normalTextClass: string = ''
+    export let   errorTextClass: string = ''
 
     const WAITING = 0;
     const CHOOSE_LOCAL_USER = 1;
@@ -19,6 +26,20 @@
 
     const storage = gv;
     const session = _session;
+
+    if(layoutClass)
+        setContext('__hd_auth_layout_class', layoutClass)
+
+    if(buttonClass)
+        setContext('__hd_auth_button_class', buttonClass)
+
+    if(normalTextClass)
+        setContext('__hd_auth_normal_text_class', normalTextClass)
+
+    if(errorTextClass)
+        setContext('__hd_auth_error_text_class', errorTextClass)
+
+    
 
     $: show = what_to_show($session, $_hd_auth_location);
 
@@ -126,14 +147,22 @@
         
 </script>
 
-{#if show == AUTHORIZE}
-    <Authorize/>
-{:else if show == CHOOSE_LOCAL_USER}
-    <LocalAuthorize/>
-{:else if show == CHOOSE_TENANT}
-    <ChooseTenant/>
-{:else if show == CONTENT}
-    <slot/>
-{:else}
-    <p>Validating session..</p>    
-{/if}
+<div class="{layoutTheme}">
+    <div class="{layoutClass}">
+
+        {#if show == AUTHORIZE}
+            <Authorize/>
+        {:else if show == CHOOSE_LOCAL_USER}
+            <LocalAuthorize/>
+        {:else if show == CHOOSE_TENANT}
+            <ChooseTenant/>
+        {:else if show == CONTENT}
+            <slot/>
+        {:else}
+            <p class="{normalTextClass}">
+                Validating session..
+            </p>    
+        {/if}
+
+    </div>
+</div>
