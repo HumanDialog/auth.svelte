@@ -147,8 +147,11 @@
         
 </script>
 
-<div class="{layoutTheme}">
-    <div class="{layoutClass}">
+{#if show == CONTENT}
+    <slot/>
+{:else}
+    <div class="{layoutTheme}">
+        <div class="{layoutClass}">
 
         {#if show == AUTHORIZE}
             <Authorize/>
@@ -156,13 +159,15 @@
             <LocalAuthorize/>
         {:else if show == CHOOSE_TENANT}
             <ChooseTenant/>
-        {:else if show == CONTENT}
-            <slot/>
         {:else}
             <p class="{normalTextClass}">
                 Validating session..
             </p>    
-        {/if}
+        {/if} 
 
+        </div>
     </div>
-</div>
+{/if}
+
+
+
