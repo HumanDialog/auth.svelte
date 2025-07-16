@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { session } from "./Session";
+    import { session as _session } from "./Session";
     import {Internals} from "./internals"
     import {_hd_auth_location, _hd_auth_querystring} from "./Auth"
     import {tick} from 'svelte'
@@ -8,6 +8,9 @@
     let redirect;
     let tenants = [];
     let tokens_info;
+
+    const storage = gv;
+    const session = _session;
 
     $: initialize($_hd_auth_location, $_hd_auth_querystring);
 
@@ -20,10 +23,10 @@
             return await error("Parameter 'redirect' not specified")
 
         let tis: string;
-        if(!gv.get("_hd_auth_obtained_tokens_info", (v)=>{tis=v;}))
+        if(!storage.get("_hd_auth_obtained_tokens_info", (v)=>{tis=v;}))
             return await error("Unknown tokens info");
 
-        gv.set("_hd_auth_obtained_tokens_info", '')
+        storage.set("_hd_auth_obtained_tokens_info", '')
         
         if(!tis)
             return await error("Unknown tokens info");

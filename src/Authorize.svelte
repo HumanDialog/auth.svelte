@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { session } from "./Session";
+    import { session as _session } from "./Session";
     import {gv} from "./Storage"
     import {reef, _hd_auth_location, _hd_auth_querystring, _hd_auth_base_address} from "./Auth"
     import type { Configuration } from "./Configuration";
     import {Internals} from './internals'
-    import { tick } from "svelte";
+    import { tick, getContext, hasContext } from "svelte";
     
     //export let params = {}
 
@@ -15,6 +15,17 @@
     let asGuest     :boolean = false;
 
     let err_msg     :string = "";
+
+    let normalTextClass :string = ''
+    if(hasContext('__hd_auth_normal_text_class'))
+        normalTextClass = getContext('__hd_auth_normal_text_class')
+
+    let errorTextClass :string = 'text-red-800'
+    if(hasContext('__hd_auth_error_text_class'))
+        errorTextClass = getContext('__hd_auth_error_text_class')
+
+    const storage = gv;
+    const session = _session;
 
     async function initialize(location :string, querystring :string)
     {
@@ -66,7 +77,9 @@
                 }
                 else
                 {
-                    let session_refreshed_successfully :boolean = await reef.refreshTokens();
+                    let session_refreshed_successfully :boolean = false;
+                    if($session?.refreshToken?.raw)
+                        session_refreshed_successfully =  await reef.refreshTokens();
                     
                     if(session_refreshed_successfully)
                     {
@@ -181,6 +194,12 @@
         result += "&code_challenge=" + code_challenge;
         result += "&code_challenge_method=S256";
         result += "&state="+ encodeURIComponent(redirection_after_signin);
+
+        if(conf.terms_and_conditions_href)
+            result += "&terms=" + encodeURIComponent(conf.terms_and_conditions_href);
+
+        if(conf.privacy_policy_href)
+            result += "&privacy=" + encodeURIComponent(conf.privacy_policy_href); 
         
         return result;
     }
@@ -201,6 +220,9 @@
 
         if(conf.ask_organization_name)
             result += "&org_name=true"
+
+        if(conf.groups_only)
+            result += "&groups_only=true"
 
         let code_verfier :string = push_code_verifier();
         let code_challenge :string = await get_code_challenge(code_verfier);
@@ -227,7 +249,7 @@
         let verifier :string;
         verifier = Array.from(array, (dec) => { return ('0' + dec.toString(16)).substr(-2); }).join('');
 
-        gv.set("_hd_auth_code_verifier", verifier);
+        storage.set("_hd_auth_code_verifier", verifier);
 
         return verifier;
     }
@@ -254,8 +276,8 @@
     function pop_code_verifier() : string
     {
         let verifier :string = "";
-        gv.get("_hd_auth_code_verifier", (v) => {verifier = v; });
-        gv.set("_hd_auth_code_verifier", "");
+        storage.get("_hd_auth_code_verifier", (v) => {verifier = v; });
+        storage.set("_hd_auth_code_verifier", "");
         return verifier;
     }
 
@@ -343,7 +365,7 @@
                             if(conf.let_choose_group_first)
                             {
                                 // let user choose. user is removed from last used tenant
-                                gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                                storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
                                 return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
                             }
                             else
@@ -364,7 +386,7 @@
                         // let user choose. It's first time
                         if(conf.let_choose_group_first)
                         {
-                            gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                            storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
                             return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
                         }
                         else
@@ -387,13 +409,13 @@
 
                         if(lastChoosenTenantId && !isTenantIncluded(tokens.tenants, lastChoosenTenantId))
                         {
-                            gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                            storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
                             return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
                         }
                         
                         if($session.signin(tokens, conf.tenant))
                         {
-                            gv.set('_hd_auth_last_chosen_tenant_id', conf.tenant, true); //$session.configuration.refresh_token_persistent)
+                            storage.set('_hd_auth_last_chosen_tenant_id', conf.tenant, true); //$session.configuration.refresh_token_persistent)
                             return state;
                         }
                         else
@@ -401,7 +423,7 @@
                     }
                     else
                     {
-                        gv.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                        storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
                         return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
                     }
                     */
@@ -433,7 +455,7 @@
 </script>
 
 {#if err_msg.length > 0}
-    <p class="text-red-800">Error: {err_msg}</p>
+    <p class="{errorTextClass}">Error: {err_msg}</p>
 {:else}
-    <p>Redirecting..</p>
+    <p class="{normalTextClass}">Redirecting..</p>
 {/if}

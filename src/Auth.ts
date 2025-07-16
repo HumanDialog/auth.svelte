@@ -3,6 +3,9 @@ import type { Configuration, Local_user } from "./Configuration";
 import { derived, readable, get } from "svelte/store";
 import { gv } from "./Storage";
 
+const s = session;
+let refreshingSemaphore = false;
+
 export class reef {
     public static configure(cfg) {
         let _session: Session = get(session);
@@ -43,11 +46,55 @@ export class reef {
         if ((options.headers == undefined) || (options.headers == null))
             options.headers = new Headers();
 
+        if(!_session.checkStorageConsistency())
+        {
+            console.log('sessionStorage problem, full_path: ', resource)
+        }
+
+        if(!_session.isActive)
+        {
+            console.log('session not active on fetch: ', resource)
+        }
+
         if (!options.headers.has("Authorization")) {
             if (_session.accessToken != null) {
-                if (!_session.accessToken.not_expired) {
-                    if (!await this.refreshTokens())
-                        this.redirectToSignIn();
+                if (!_session.accessToken.not_expired) 
+                {
+
+                    console.log('sessionId:', _session.sessionId)
+                    const iat = _session.accessToken.get_claim<number>("iat")
+                    const exp = _session.accessToken.get_claim<number>("exp")
+                    console.log('iat:', iat, new Date(iat * 1000))
+                    console.log('exp:', exp, new Date(exp * 1000))
+
+                    if(refreshingSemaphore)
+                    {
+                        console.log('auth: request need to wait for tokens refreshing... ', resource)
+                        const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
+                        let triesNo = 10;
+                        while(refreshingSemaphore && triesNo>0)
+                        {
+                            await sleep(1000);
+                            triesNo--;
+                        }
+
+                        if(refreshingSemaphore)
+                        {
+                            console.log('auth: too long refresh waiting. drop the request')
+                            return null;
+                        }
+                    }
+                    else
+                    {
+                        console.log('auth: first req with expired token, refreshing...', resource)
+                        //refreshingSemaphore = true;
+                        const refreshingSuccess = await this.refreshTokens(_session)
+                        //refreshingSemaphore = false;
+
+                        if(!refreshingSuccess)
+                            this.redirectToSignIn();
+
+                    }
                 }
 
                 options.headers.append("Authorization", "Bearer " + _session.accessToken.raw);
@@ -55,19 +102,32 @@ export class reef {
             }
             else
             {
+                console.log('auth: setting up x-reef- headers for local developement')
                 const user: Local_user = _session.localDevCurrentUser;
                 if (user) 
                 {
                     if(user.uid > 0)
-                        options.headers.append('X-Reef-User-Id', user.uid)
+                    {
+                        if(!options.headers.has("X-Reef-User-Id"))
+                            options.headers.append('X-Reef-User-Id', user.uid)
+                    }
                     else
-                        options.headers.append('X-Reef-As-User', user.username)
+                    {
+                        if(!options.headers.has("X-Reef-As-User"))
+                            options.headers.append('X-Reef-As-User', user.username)
+                    }
 
                     if(user.role)
-                        options.headers.append('X-Reef-Access-Role', user.role)
+                    {
+                        if(!options.headers.has("X-Reef-Access-Role"))   
+                            options.headers.append('X-Reef-Access-Role', user.role)
+                    }
 
                     if(user.groupId)
-                        options.headers.append('X-Reef-Group-Id', user.groupId)
+                    {
+                        if(!options.headers.has("X-Reef-Group-Id"))
+                            options.headers.append('X-Reef-Group-Id', user.groupId)
+                    }
                 }
             } 
             
@@ -106,7 +166,7 @@ export class reef {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
-            let res = await reef.fetch(path)
+            let res = await reef.fetch(path, {})
             if (res.ok) {
                 const response_string = await res.text();
                 if (!response_string)
@@ -191,21 +251,39 @@ export class reef {
         }
     }
 
-    public static async refreshTokens(): Promise<boolean> {
-        let _session: Session = get(session);
+    private static result_with(res: boolean) : boolean
+    {
+        refreshingSemaphore = false;
+        return res;
+    } 
+
+    public static async refreshTokens(_session: Session|null = null): Promise<boolean> {
+        
+        if(refreshingSemaphore)
+        {
+            console.log('pararell token refreshing')
+            console.trace();
+        }
+
+        refreshingSemaphore = true;
+
+        if(!_session)
+            _session = get(session);
+
+        console.log('refreshTokens')
 
         if (_session.refreshToken == null)
         {
-            return false;
+            console.log('refreshToken is null')
+            return reef.result_with(false);
         }
 
         let refresh_token: string = _session.refreshToken.raw;
         if (refresh_token == "")
         {
-            return false;
+            console.log('refreshToken is empty')
+            return reef.result_with(false);
         }
-
-        
 
         let conf: Configuration = _session.configuration;
         let data = new URLSearchParams();
@@ -234,6 +312,8 @@ export class reef {
                 });
 
             if (res.ok) {
+                console.log('/auth/token 200 OK')
+
                 let tokens = await res.json();
 
                 if (tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1) 
@@ -250,11 +330,14 @@ export class reef {
 
                         if( tokens.tenants.length == 1)
                         {
-                            if (_session.signin(tokens))
-                                return true;
+                            if (_session.refreshTokens(tokens))
+                            {
+                                return reef.result_with(true);
+                            }
                             else
                             {
-                                return false; 
+                                console.log("Can't signin (1)", tokens)
+                                return reef.result_with(false);
                             }
                         }
                     }
@@ -263,45 +346,47 @@ export class reef {
                     {
                         if(tokens.tenants.some(t => t.id == lastChosenTenantId))       // is last used included 
                         {
-                            if(_session.signin(tokens, lastChosenTenantId))
+                            if(_session.refreshTokens(tokens, lastChosenTenantId))
                             {
-                                return true;
+                                return reef.result_with(true);
                             }
                             else
                             {
-                                return false;
+                                console.log("Can't signin (2)", tokens)
+                                return reef.result_with(false);
                             }
                         }
                         else
                         {
-                            return false;
+                            console.log("Can't signin (3)", lastChosenTenantId)
+                            return reef.result_with(false);
                         }
                     }
                     else
                     {
-                        return false;
+                        console.log("Can't signin (4)")
+                        return reef.result_with(false);
                     }
                 }
 
-                if (_session.signin(tokens))
-                    return true;
+                if (_session.refreshTokens(tokens))
+                    return reef.result_with(true);
                 else
                 {
-                    return false;
+                    console.log("Can't signin (5)", tokens)
+                    return reef.result_with(false);
                 }
             }
             else {
                 _session.signout();  // clean up session data
-
-                let err = await res.json();
-                console.error(err.error, err.error_description);
-                return false;
+                res.json().then((err) => console.log('refreshing tokens not succees: ', err.error, err.error_description))
+                return reef.result_with(false);
             }
         }
         catch (error) {
             _session.signout();  // clean up session data
             console.error(error);
-            return false;
+            return reef.result_with(false);
         }
     }
 
@@ -311,7 +396,7 @@ export class reef {
         let path = `/auth/am_i_admin?tenant=${tenant_id}`;
 
         try {
-            let res = await reef.fetch(path)
+            let res = await reef.fetch(path, {})
             if (res.ok) {
                 const response_string = await res.text();
                 if (!response_string)
@@ -331,6 +416,8 @@ export class reef {
     }
 
     public static redirectToSignIn() {
+        
+        console.log('redirectToSignIn')
         
         let current_path: string;
         current_path = window.location.href;
@@ -363,7 +450,7 @@ export class reef {
       
         try
         {
-            const res = await reef.fetch(`/dev/get-tenant-info?app_id=${app_id}&tenant_id=${_session.configuration.tenant}`)
+            const res = await reef.fetch(`/dev/get-tenant-info?app_id=${app_id}&tenant_id=${_session.configuration.tenant}`, {})
             if(res.ok)
             {
                 let response = await res.json();

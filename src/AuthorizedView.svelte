@@ -1,21 +1,45 @@
 <script lang="ts">
-    import { session } from "./Session";
+    import { session as _session} from "./Session";
     import {_hd_auth_location, _hd_auth_querystring, reef} from './Auth'
     import Authorize from "./Authorize.svelte";
     import LocalAuthorize from "./LocalAuthorize.svelte"
     import ChooseTenant from "./ChooseTenant.svelte";
     import {gv} from "./Storage"
+    import {getContext, setContext} from 'svelte'
 
     export let   isDisabled   :boolean = false;
     export let   automaticallyRefreshTokens :boolean = false;
     export let   autoRedirectToSignIn :boolean = true;
     export let   optionalGuestMode  :boolean = false;
 
+    export let   layoutTheme: string = ''
+    export let   layoutClass: string = ''
+    export let   buttonClass: string = ''
+    export let   normalTextClass: string = ''
+    export let   errorTextClass: string = ''
+
     const WAITING = 0;
     const CHOOSE_LOCAL_USER = 1;
     const AUTHORIZE = 2;
     const CHOOSE_TENANT = 3;
     const CONTENT = 4;
+
+    const storage = gv;
+    const session = _session;
+
+    if(layoutClass)
+        setContext('__hd_auth_layout_class', layoutClass)
+
+    if(buttonClass)
+        setContext('__hd_auth_button_class', buttonClass)
+
+    if(normalTextClass)
+        setContext('__hd_auth_normal_text_class', normalTextClass)
+
+    if(errorTextClass)
+        setContext('__hd_auth_error_text_class', errorTextClass)
+
+    
 
     $: show = what_to_show($session, $_hd_auth_location);
 
@@ -52,7 +76,7 @@
         {
             if(false && gid && $session.tid != gid)
             {
-                gv.set('_hd_auth_last_chosen_tenant_id', gid, true);
+                storage.set('_hd_auth_last_chosen_tenant_id', gid, true);
 
                 const tInfo = $session.tenants.find(t => t.id == gid)
                 if(tInfo)
@@ -72,7 +96,25 @@
         {
             if($session?.refreshToken?.raw)
             {
-                reef.refreshTokens().then((res) => {show = CONTENT; })
+                console.log('sessionId 2:', $session.sessionId)
+                reef.refreshTokens().then((res) => 
+                {
+                    if(!res)
+                    {
+                        if(autoRedirectToSignIn)  
+                            setTimeout( () => reef.redirectToSignIn(), 100);
+                        else
+                        {
+                            $session.signout();
+                            setTimeout( () => {window.location.href = '/'}, 100);
+                        }
+                    }
+                    else
+                    {
+                        show = CONTENT; 
+                    }
+                })
+
                 return WAITING;
             }
             else
@@ -84,7 +126,7 @@
         {
             if(false && gid)
             {
-                gv.set('_hd_auth_last_chosen_tenant_id', gid, true);
+                storage.set('_hd_auth_last_chosen_tenant_id', gid, true);
             }
             
             setTimeout( () => reef.redirectToSignIn(), 100);
@@ -105,14 +147,27 @@
         
 </script>
 
-{#if show == AUTHORIZE}
-    <Authorize/>
-{:else if show == CHOOSE_LOCAL_USER}
-    <LocalAuthorize/>
-{:else if show == CHOOSE_TENANT}
-    <ChooseTenant/>
-{:else if show == CONTENT}
+{#if show == CONTENT}
     <slot/>
 {:else}
-    <p>Validating session..</p>    
+    <div class="{layoutTheme}">
+        <div class="{layoutClass}">
+
+        {#if show == AUTHORIZE}
+            <Authorize/>
+        {:else if show == CHOOSE_LOCAL_USER}
+            <LocalAuthorize/>
+        {:else if show == CHOOSE_TENANT}
+            <ChooseTenant/>
+        {:else}
+            <p class="{normalTextClass}">
+                Validating session..
+            </p>    
+        {/if} 
+
+        </div>
+    </div>
 {/if}
+
+
+

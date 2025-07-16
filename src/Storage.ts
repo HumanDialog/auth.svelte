@@ -72,4 +72,4 @@ export class Browser_storage implements Storage
     }
 }
 
-export let gv :Browser_storage = new Browser_storage;
+export const gv :Browser_storage = new Browser_storage;

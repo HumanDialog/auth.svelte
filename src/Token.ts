@@ -51,9 +51,31 @@ export class Token
         exp = this.get_claim<number>("exp");
         if(exp === undefined)
             return false;
+
+        let margin_s :number = 2 * 60;  // 2 min default
+
+        let iat :number | undefined;
+        iat = this.get_claim<number>("iat");
+        if(iat)
+        {
+            const tokenDuration_min = (exp - iat) / 60;
+            if(tokenDuration_min > 59) {
+                margin_s = 5 * 60;      // 5 min
+            } else if(tokenDuration_min > 29) {
+                margin_s = 3 * 60;      // 3 min
+            } else if(tokenDuration_min > 14) {
+                margin_s = 2 * 60;      // 2 min
+            } else if(tokenDuration_min > 9) {
+                margin_s = 1.5 * 60;    // 1.5 min
+            } else if(tokenDuration_min > 4) {
+                margin_s = 60;          // 1 min
+            } else {
+                margin_s = 15;          // 15 sec
+            }
+        }
         
         const now = Math.floor(Date.now() / 1000);
-        if(exp > now+15)
+        if(exp > now + margin_s)
             return true;
         
         return false;
