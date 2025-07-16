@@ -4,7 +4,7 @@ import { derived, readable, get } from "svelte/store";
 import { gv } from "./Storage";
 
 const s = session;
-let refreshing = false;
+let refreshingSemaphore = false;
 
 export class reef {
     public static configure(cfg) {
@@ -67,18 +67,18 @@ export class reef {
                     console.log('iat:', iat, new Date(iat * 1000))
                     console.log('exp:', exp, new Date(exp * 1000))
 
-                    if(refreshing)
+                    if(refreshingSemaphore)
                     {
                         console.log('auth: request need to wait for tokens refreshing... ', resource)
                         const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
                         let triesNo = 10;
-                        while(refreshing && triesNo>0)
+                        while(refreshingSemaphore && triesNo>0)
                         {
                             await sleep(1000);
                             triesNo--;
                         }
 
-                        if(refreshing)
+                        if(refreshingSemaphore)
                         {
                             console.log('auth: too long refresh waiting. drop the request')
                             return null;
@@ -87,9 +87,9 @@ export class reef {
                     else
                     {
                         console.log('auth: first req with expired token, refreshing...', resource)
-                        refreshing = true;
+                        //refreshingSemaphore = true;
                         const refreshingSuccess = await this.refreshTokens(_session)
-                        refreshing = false;
+                        //refreshingSemaphore = false;
 
                         if(!refreshingSuccess)
                             this.redirectToSignIn();
@@ -251,8 +251,22 @@ export class reef {
         }
     }
 
+    private static result_with(res: boolean) : boolean
+    {
+        refreshingSemaphore = false;
+        return res;
+    } 
+
     public static async refreshTokens(_session: Session|null = null): Promise<boolean> {
         
+        if(refreshingSemaphore)
+        {
+            console.log('pararell token refreshing')
+            console.trace();
+        }
+
+        refreshingSemaphore = true;
+
         if(!_session)
             _session = get(session);
 
@@ -261,14 +275,14 @@ export class reef {
         if (_session.refreshToken == null)
         {
             console.log('refreshToken is null')
-            return false;
+            return reef.result_with(false);
         }
 
         let refresh_token: string = _session.refreshToken.raw;
         if (refresh_token == "")
         {
             console.log('refreshToken is empty')
-            return false;
+            return reef.result_with(false);
         }
 
         let conf: Configuration = _session.configuration;
@@ -317,11 +331,13 @@ export class reef {
                         if( tokens.tenants.length == 1)
                         {
                             if (_session.refreshTokens(tokens))
-                                return true;
+                            {
+                                return reef.result_with(true);
+                            }
                             else
                             {
                                 console.log("Can't signin (1)", tokens)
-                                return false; 
+                                return reef.result_with(false);
                             }
                         }
                     }
@@ -332,45 +348,45 @@ export class reef {
                         {
                             if(_session.refreshTokens(tokens, lastChosenTenantId))
                             {
-                                return true;
+                                return reef.result_with(true);
                             }
                             else
                             {
                                 console.log("Can't signin (2)", tokens)
-                                return false;
+                                return reef.result_with(false);
                             }
                         }
                         else
                         {
                             console.log("Can't signin (3)", lastChosenTenantId)
-                            return false;
+                            return reef.result_with(false);
                         }
                     }
                     else
                     {
                         console.log("Can't signin (4)")
-                        return false;
+                        return reef.result_with(false);
                     }
                 }
 
                 if (_session.refreshTokens(tokens))
-                    return true;
+                    return reef.result_with(true);
                 else
                 {
                     console.log("Can't signin (5)", tokens)
-                    return false;
+                    return reef.result_with(false);
                 }
             }
             else {
                 _session.signout();  // clean up session data
                 res.json().then((err) => console.log('refreshing tokens not succees: ', err.error, err.error_description))
-                return false;
+                return reef.result_with(false);
             }
         }
         catch (error) {
             _session.signout();  // clean up session data
             console.error(error);
-            return false;
+            return reef.result_with(false);
         }
     }
 
