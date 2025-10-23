@@ -1,5 +1,6 @@
 import { session, Session, App_instance_info } from "./Session";
-import type { Configuration, Local_user } from "./Configuration";
+import type { Configuration, Local_user} from "./Configuration";
+import {Mode} from './Configuration'
 import { derived, readable, get } from "svelte/store";
 import { gv } from "./Storage";
 
@@ -46,14 +47,20 @@ export class reef {
         if ((options.headers == undefined) || (options.headers == null))
             options.headers = new Headers();
 
-        if(!_session.checkStorageConsistency())
+        const hasConfiguration = _session && _session.configuration
+        const isRemoteSession = _session && _session.configuration &&  (_session.configuration.mode == Mode.Remote)
+        
+        if((!hasConfiguration) || isRemoteSession)
         {
-            console.log('sessionStorage problem, full_path: ', resource)
-        }
+            if(!_session.checkStorageConsistency())
+            {
+                console.log('sessionStorage problem, full_path: ', resource)
+            }
 
-        if(!_session.isActive)
-        {
-            console.log('session not active on fetch: ', resource)
+            if(!_session.isActive)
+            {
+                console.log('session not active on fetch: ', resource)
+            }
         }
 
         if (!options.headers.has("Authorization")) {
@@ -160,6 +167,22 @@ export class reef {
             return `/json/${apiver}${path}`;
         else
             return `/json/${apiver}/${path}`;
+    }
+
+    public static get_general_cloud_address()
+    {
+        let result = ''
+        const _session: Session = get(session);
+        const conf = _session.configuration
+        if(conf.mode == Mode.Remote)
+            result = conf.iss
+        else
+            result = conf.local_api
+
+        if(result.endsWith('/'))
+            return result.substring(0, result.length-1)
+        else
+            return result;
     }
 
     public static async get(_path, onError) {

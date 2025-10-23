@@ -455,7 +455,12 @@
 </script>
 
 {#if err_msg.length > 0}
-    <p class="{errorTextClass}">Error: {err_msg}</p>
+    <p class="{errorTextClass}">
+        Error: {err_msg}
+        <br/>
+        <a href="/" class="underline text-sm font-semibold cursor-pointer text-stone-900 dark:text-white">Reload page</a>
+    </p>
+    
 {:else}
     <p class="{normalTextClass}">Redirecting..</p>
 {/if}
