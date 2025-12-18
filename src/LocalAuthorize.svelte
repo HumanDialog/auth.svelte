@@ -22,7 +22,7 @@
         if(redirect)
         {
             await tick();
-            window.location.href = redirect;
+            window.location.replace(redirect);
         }
     }
 

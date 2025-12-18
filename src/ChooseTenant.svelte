@@ -48,7 +48,7 @@
         if($session.signin(tokens_info, tenant.id))
         {
             await tick();
-            window.location.href = redirect;
+            window.location.replace(redirect);
         }
         else
             await error("Something wrong with tokens");
@@ -57,7 +57,7 @@
     async function error(msg)
     {
         await tick();
-        window.location.href = "/#/auth/err?desc=" + encodeURIComponent(msg);
+        window.location.replace("/#/auth/err?desc=" + encodeURIComponent(msg));
         return msg;
     }
 </script>

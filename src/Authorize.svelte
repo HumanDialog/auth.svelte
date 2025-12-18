@@ -59,7 +59,7 @@
                 if($session.disabled)
                 {
                     await tick();
-                    window.location.href = redirect;
+                    window.location.replace(redirect);
                 }
                 else if($session.local)
                 {
@@ -73,7 +73,7 @@
                     navto += "#/auth-local?redirect=" + encodeURIComponent(redirect);
                     await tick();
 
-                    window.location.href = navto;
+                    window.location.replace(navto);
                 }
                 else
                 {
@@ -84,13 +84,13 @@
                     if(session_refreshed_successfully)
                     {
                         await tick();
-                        window.location.href = redirect;
+                        window.location.replace(redirect);
                     }
                     else
                     {
                         redirect_to = await generate_signin_redirection(redirect);
                         await tick();
-                        window.location.href = redirect_to;
+                        window.location.replace(redirect_to);
                     }
                 }
             }
@@ -99,7 +99,7 @@
         case "signout":
             $session.signout();
             await tick();
-            window.location.href = redirect;
+            window.location.replace(redirect);
             break;
 
         case "signup":
@@ -110,7 +110,7 @@
                 if($session.disabled)
                 {
                     await tick();
-                    window.location.href = redirect;
+                    window.location.replace(redirect);
                 }
                 else if($session.local)
                 {
@@ -123,14 +123,14 @@
 
                     navto += "#/auth/err?desc=Signup+is+not+supported+in+local+environment"
                     await tick();
-                    window.location.href = navto 
+                    window.location.replace(navto) 
                 }
                 else
                 {
                     $session.signout();
                     redirect_to = await generate_signup_redirection(redirect);
                     await tick();
-                    window.location.href = redirect_to;
+                    window.location.replace(redirect_to);
                 }
             }
             break;
@@ -138,7 +138,8 @@
         case "cb":
             redirect_to = await handle_authorization_callback();
             await tick();
-            window.location.href = redirect_to;
+            window.location.replace(redirect_to);
+            
             break;
 
         case "err":
@@ -158,7 +159,7 @@
                                                             + '+cmd:+'+encodeURIComponent(cmd)
                                                             + '+location:+'+encodeURIComponent(location)
                 await tick();
-                window.location.href = navto 
+                window.location.replace(navto) 
             }
             
             break;
