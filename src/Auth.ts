@@ -7,10 +7,62 @@ import { gv } from "./Storage";
 const s = session;
 let refreshingSemaphore = false;
 
+let fetchHandlers = null
+let fetchHandlersSemaphore = false
+
+function callOnBeforeFetchHandlers(resource)
+{
+    if(fetchHandlersSemaphore)
+        return
+
+    fetchHandlersSemaphore = true
+    if(fetchHandlers)
+    {
+        if(fetchHandlers.onBefore && Array.isArray(fetchHandlers.onBefore) && fetchHandlers.onBefore.length > 0)
+            fetchHandlers.onBefore.forEach(cb => cb(resource))
+    }
+    fetchHandlersSemaphore = false
+}
+
+function callOnAfterFetchHandlers(res)
+{
+    if(fetchHandlersSemaphore)
+        return
+
+    fetchHandlersSemaphore = true
+
+    if(fetchHandlers)
+    {
+        if(fetchHandlers.onAfter && Array.isArray(fetchHandlers.onAfter) && fetchHandlers.onAfter.length > 0)
+            fetchHandlers.onAfter.forEach(cb => cb(res))
+    }
+
+    fetchHandlersSemaphore = false
+}
+
+function callOnErrorFetchHandlers(res, err)
+{
+    if(fetchHandlersSemaphore)
+        return
+
+    fetchHandlersSemaphore = true
+
+    if(fetchHandlers)
+    {
+        if(fetchHandlers.onError && Array.isArray(fetchHandlers.onError) && fetchHandlers.onError.length > 0)
+            fetchHandlers.onError.forEach(cb => cb(res, err))
+    }
+
+    fetchHandlersSemaphore = false
+}
+
 export class reef {
     public static configure(cfg) {
         let _session: Session = get(session);
         _session.configure(cfg);
+
+        if(cfg.fetchHandlers)
+            fetchHandlers = cfg.fetchHandlers
     }
 
     public static async fetch(...args) {
@@ -40,6 +92,8 @@ export class reef {
 
             resource = full_path;
         }
+
+        callOnBeforeFetchHandlers(resource)
 
         if ((options == undefined) || (options == null))
             options = {};
@@ -185,11 +239,13 @@ export class reef {
             return result;
     }
 
-    public static async get(_path, onError) {
+    public static async get(_path, onError=undefined) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
             let res = await reef.fetch(path, {})
+            callOnAfterFetchHandlers(res)
+
             if (res.ok) {
                 const response_string = await res.text();
                 if (!response_string)
@@ -203,6 +259,9 @@ export class reef {
                 console.error(err)
                 if(onError)
                     onError(err)
+                else
+                    callOnErrorFetchHandlers(err, res)
+                
                 return null;
             }
         }
@@ -210,11 +269,13 @@ export class reef {
             console.error(err);
             if(onError)
                 onError(err)
+            else
+                callOnErrorFetchHandlers(err, undefined)
             return null;
         }
     }
 
-    public static async post(_path, request_object, onError) {
+    public static async post(_path, request_object, onError=undefined) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
@@ -222,6 +283,8 @@ export class reef {
                 method: 'POST',
                 body: JSON.stringify(request_object)
             })
+            callOnAfterFetchHandlers(res)
+
             if (res.ok) {
                 const response_string = await res.text();
                 if (!response_string)
@@ -235,6 +298,9 @@ export class reef {
                 console.error(err)
                 if(onError)
                     onError(err)
+                else
+                    callOnErrorFetchHandlers(err, res)
+
                 return null;
             }
         }
@@ -242,14 +308,18 @@ export class reef {
             console.error(err);
             if(onError)
                 onError(err)
+            else
+                callOnErrorFetchHandlers(err, undefined)
             return null;
         }
     }
 
-    public static async delete(_path, onError) {
+    public static async delete(_path, onError=undefined) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
         try {
             let res = await reef.fetch(path, { method: 'DELETE' });
+            callOnAfterFetchHandlers(res)
+
             if (res.ok) {
                 const response_string = await res.text();
                 if (!response_string)
@@ -263,6 +333,8 @@ export class reef {
                 console.error(err)
                 if(onError)
                     onError(err)
+                else
+                    callOnErrorFetchHandlers(err, res)
                 return null;
             }
         }
@@ -270,6 +342,8 @@ export class reef {
             console.error(err);
             if(onError)
                 onError(err)
+            else
+                callOnErrorFetchHandlers(err, undefined)
             return null;
         }
     }
@@ -506,7 +580,23 @@ export class reef {
     }
 }
 
+function isBrowser() 
+{
+  return typeof window !== "undefined" && typeof window.location !== "undefined";
+}
+
 function get_location() {
+    if(!isBrowser() )
+    {
+        return {
+            href: '', 
+            location: '', 
+            querystring: '', 
+            base_address: '', 
+            orgin: ''
+        }
+    }
+
     const href = window.location.href;
     const hashPosition = href.indexOf('#/')
     let base_address = window.location.pathname;
@@ -526,6 +616,9 @@ const loc = readable(
     null,
     function start(set) {
         set(get_location())
+        
+        if (!isBrowser()) return () => {};
+
         const update = () => { set(get_location()) }
 
         window.addEventListener('hashchange', update, false);       // hash based routers

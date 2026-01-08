@@ -56,12 +56,19 @@ export class Session
     constructor(storage: Browser_storage)
     {
         this.storage = storage;
-        
+
+        if(    typeof globalThis !== "undefined" &&
+                globalThis.crypto &&
+                typeof globalThis.crypto.getRandomValues === "function") 
+    {
         let arr = new Uint8Array((16) / 2)
-        window.crypto.getRandomValues(arr)
+        globalThis.crypto.getRandomValues(arr)
 
         const dec2hex = (dec)=> dec.toString(16).padStart(2, "0")
         this.sessionId = Array.from(arr, dec2hex).join('')
+    }
+        
+        
     }
 
     public configure(cfg, internal=false)
