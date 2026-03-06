@@ -10,7 +10,7 @@ let refreshingSemaphore = false;
 let fetchHandlers = null
 let fetchHandlersSemaphore = false
 
-function callOnBeforeFetchHandlers(resource)
+async function callOnBeforeFetchHandlers(resource)
 {
     if(fetchHandlersSemaphore)
         return
@@ -19,12 +19,19 @@ function callOnBeforeFetchHandlers(resource)
     if(fetchHandlers)
     {
         if(fetchHandlers.onBefore && Array.isArray(fetchHandlers.onBefore) && fetchHandlers.onBefore.length > 0)
-            fetchHandlers.onBefore.forEach(cb => cb(resource))
+        {
+            let results = []
+            fetchHandlers.onBefore.forEach(cb => 
+                results.push( 
+                    cb(resource) ))
+
+            await Promise.allSettled(results)
+        }
     }
     fetchHandlersSemaphore = false
 }
 
-function callOnAfterFetchHandlers(res)
+async function callOnAfterFetchHandlers(res)
 {
     if(fetchHandlersSemaphore)
         return
@@ -34,13 +41,20 @@ function callOnAfterFetchHandlers(res)
     if(fetchHandlers)
     {
         if(fetchHandlers.onAfter && Array.isArray(fetchHandlers.onAfter) && fetchHandlers.onAfter.length > 0)
-            fetchHandlers.onAfter.forEach(cb => cb(res))
+        {
+            let results = []
+            fetchHandlers.onAfter.forEach(cb => 
+                results.push(
+                    cb(res)))
+
+            await Promise.allSettled(results)
+        }
     }
 
     fetchHandlersSemaphore = false
 }
 
-function callOnErrorFetchHandlers(res, err)
+async function callOnErrorFetchHandlers(res, err)
 {
     if(fetchHandlersSemaphore)
         return
@@ -50,7 +64,14 @@ function callOnErrorFetchHandlers(res, err)
     if(fetchHandlers)
     {
         if(fetchHandlers.onError && Array.isArray(fetchHandlers.onError) && fetchHandlers.onError.length > 0)
-            fetchHandlers.onError.forEach(cb => cb(res, err))
+        {
+            let results = []
+            fetchHandlers.onError.forEach(cb => 
+                results.push(
+                    cb(res, err)))
+
+            await Promise.allSettled(results)
+        }
     }
 
     fetchHandlersSemaphore = false
@@ -93,7 +114,7 @@ export class reef {
             resource = full_path;
         }
 
-        callOnBeforeFetchHandlers(resource)
+        await callOnBeforeFetchHandlers(resource)
 
         if ((options == undefined) || (options == null))
             options = {};
@@ -244,7 +265,7 @@ export class reef {
 
         try {
             let res = await reef.fetch(path, {})
-            callOnAfterFetchHandlers(res)
+            await callOnAfterFetchHandlers(res)
 
             if (res.ok) {
                 const response_string = await res.text();
@@ -260,7 +281,7 @@ export class reef {
                 if(onError)
                     onError(err)
                 else
-                    callOnErrorFetchHandlers(err, res)
+                    await callOnErrorFetchHandlers(err, res)
                 
                 return null;
             }
@@ -270,7 +291,7 @@ export class reef {
             if(onError)
                 onError(err)
             else
-                callOnErrorFetchHandlers(err, undefined)
+                await callOnErrorFetchHandlers(err, undefined)
             return null;
         }
     }
@@ -283,7 +304,7 @@ export class reef {
                 method: 'POST',
                 body: JSON.stringify(request_object)
             })
-            callOnAfterFetchHandlers(res)
+            await callOnAfterFetchHandlers(res)
 
             if (res.ok) {
                 const response_string = await res.text();
@@ -299,7 +320,7 @@ export class reef {
                 if(onError)
                     onError(err)
                 else
-                    callOnErrorFetchHandlers(err, res)
+                    await callOnErrorFetchHandlers(err, res)
 
                 return null;
             }
@@ -309,7 +330,7 @@ export class reef {
             if(onError)
                 onError(err)
             else
-                callOnErrorFetchHandlers(err, undefined)
+                await callOnErrorFetchHandlers(err, undefined)
             return null;
         }
     }
@@ -318,7 +339,7 @@ export class reef {
         let path = reef.correct_path_with_api_version_if_needed(_path)
         try {
             let res = await reef.fetch(path, { method: 'DELETE' });
-            callOnAfterFetchHandlers(res)
+            await callOnAfterFetchHandlers(res)
 
             if (res.ok) {
                 const response_string = await res.text();
@@ -334,7 +355,7 @@ export class reef {
                 if(onError)
                     onError(err)
                 else
-                    callOnErrorFetchHandlers(err, res)
+                    await callOnErrorFetchHandlers(err, res)
                 return null;
             }
         }
@@ -343,7 +364,7 @@ export class reef {
             if(onError)
                 onError(err)
             else
-                callOnErrorFetchHandlers(err, undefined)
+                await callOnErrorFetchHandlers(err, undefined)
             return null;
         }
     }
@@ -415,13 +436,15 @@ export class reef {
 
                 if (tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1) 
                 {
-                    if(conf.tenant)         // do we have global tenant specified?
+                    if(conf.tenant || conf.groups_only)
                     {
                         let filteredTenants = []
-                        if(conf.groups_only)
+                        if(conf.tenant && conf.groups_only)
                             filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant + '/'))
-                        else
+                        else if(conf.tenant)
                             filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant))
+                        else    // conf.groups_only
+                            filteredTenants = tokens.tenants.filter(t => t.id.includes('/'))
                         
                         tokens.tenants = [...filteredTenants];
 
@@ -438,6 +461,7 @@ export class reef {
                             }
                         }
                     }
+                    
                     const lastChosenTenantId = _session.lastChosenTenantId;
                     if(lastChosenTenantId)
                     {

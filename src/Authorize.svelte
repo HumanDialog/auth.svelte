@@ -329,13 +329,15 @@
                 {
                     let lastChosenTenantId = $session.lastChosenTenantId;
 
-                    if(conf.tenant)         // do we have global tenant specified?
+                    if(conf.tenant || conf.groups_only) 
                     {
                         let filteredTenants = []
-                        if(conf.groups_only)
+                        if(conf.tenant && conf.groups_only)
                             filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant + '/'))
-                        else
+                        else if(conf.tenant)
                             filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant))
+                        else    // conf.groups_only
+                            filteredTenants = tokens.tenants.filter(t => t.id.includes('/'));
                         
                         tokens.tenants = [...filteredTenants];
                         
