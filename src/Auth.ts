@@ -138,45 +138,38 @@ export class reef {
             }
         }
 
-        if (!options.headers.has("Authorization")) {
-            if (_session.accessToken != null) {
+        if (!options.headers.has("Authorization")) 
+        {
+            if(refreshingSemaphore)
+            {
+                console.log('auth: request need to wait for tokens refreshing... ', resource)
+                const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
+                let triesNo = 10;
+                while(refreshingSemaphore && triesNo>0)
+                {
+                    await sleep(1000);
+                    triesNo--;
+                }
+
+                if(refreshingSemaphore)
+                {
+                    console.log('auth: too long refresh waiting. drop the request')
+                    return null;
+                }
+            }
+
+            if (_session.accessToken != null) 
+            {
                 if (!_session.accessToken.not_expired) 
                 {
+                    console.log('auth: first req with expired token, refreshing...', resource)
+                    //refreshingSemaphore = true;
+                    const refreshingSuccess = await this.refreshTokens(_session)
+                    //refreshingSemaphore = false;
 
-                    console.log('sessionId:', _session.sessionId)
-                    const iat = _session.accessToken.get_claim<number>("iat")
-                    const exp = _session.accessToken.get_claim<number>("exp")
-                    console.log('iat:', iat, new Date(iat * 1000))
-                    console.log('exp:', exp, new Date(exp * 1000))
+                    if(!refreshingSuccess)
+                        this.redirectToSignIn();
 
-                    if(refreshingSemaphore)
-                    {
-                        console.log('auth: request need to wait for tokens refreshing... ', resource)
-                        const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
-                        let triesNo = 10;
-                        while(refreshingSemaphore && triesNo>0)
-                        {
-                            await sleep(1000);
-                            triesNo--;
-                        }
-
-                        if(refreshingSemaphore)
-                        {
-                            console.log('auth: too long refresh waiting. drop the request')
-                            return null;
-                        }
-                    }
-                    else
-                    {
-                        console.log('auth: first req with expired token, refreshing...', resource)
-                        //refreshingSemaphore = true;
-                        const refreshingSuccess = await this.refreshTokens(_session)
-                        //refreshingSemaphore = false;
-
-                        if(!refreshingSuccess)
-                            this.redirectToSignIn();
-
-                    }
                 }
 
                 options.headers.append("Authorization", "Bearer " + _session.accessToken.raw);
@@ -550,7 +543,11 @@ export class reef {
         if (!navto.endsWith('/'))
             navto += '/';
 
-        navto += "#/auth/signin?redirect=" + encodeURIComponent(current_path);
+        const _session: Session = get(session)
+        if(_session.configuration && _session.configuration.own_signin)
+            navto += '#/' + _session.configuration.own_signin + '?redirect=' + encodeURIComponent(current_path)
+        else
+            navto += "#/auth/signin?redirect=" + encodeURIComponent(current_path);
 
         //await tick();
         window.location.href = navto;
@@ -602,6 +599,7 @@ export class reef {
             dispatchEvent(event);
         }
     }
+
 }
 
 function isBrowser() 
@@ -658,7 +656,24 @@ const loc = readable(
 export const _hd_auth_location = derived(loc, ($loc) => $loc.location);
 export const _hd_auth_querystring = derived(loc, ($loc) => $loc.querystring);
 export const _hd_auth_base_address = derived(loc, ($loc) => $loc.base_address);
-export const signInHRef = derived(loc, ($loc) => '#/auth/signin?redirect=' + encodeURIComponent($loc.href));
+
+export const signInHRef = derived(loc, ($loc) => { 
+    const redirect_encoded = encodeURIComponent($loc.href);
+    const _session = get(session);
+    if(_session && _session.configuration && _session.configuration.own_signin)
+        return '#/' + _session.configuration.own_signin + '?redirect=' + redirect_encoded
+    else
+        return '#/auth/signin?redirect=' + redirect_encoded
+});
+
 export const signOutHRef = derived(loc, ($loc) => '#/auth/signout?redirect=' + encodeURIComponent($loc.orgin));
-export const signUpHRef = derived(loc, ($loc) => '#/auth/signup?redirect=' + encodeURIComponent($loc.href));
+
+export const signUpHRef = derived(loc, ($loc) => {
+    const redirect_encoded = encodeURIComponent($loc.href);
+    const _session = get(session);
+    if(_session && _session.configuration && _session.configuration.own_signup)
+        return '#/' + _session.configuration.own_signup + "?redirect=" + redirect_encoded
+    else
+        return '#/auth/signup?redirect=' + redirect_encoded
+});
 

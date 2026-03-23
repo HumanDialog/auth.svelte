@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { session as _session } from "./Session";
+    import { session as _session, Session } from "./Session";
     import {gv} from "./Storage"
     import {reef, _hd_auth_location, _hd_auth_querystring, _hd_auth_base_address} from "./Auth"
     import type { Configuration } from "./Configuration";
@@ -189,8 +189,8 @@
         if(conf.groups_only)
             result += "&groups_only=true"
 
-        let code_verfier :string = push_code_verifier();
-        let code_challenge :string = await get_code_challenge(code_verfier);
+        let code_verfier :string = $session.push_code_verifier();
+        let code_challenge :string = await $session.get_code_challenge(code_verfier);
 
         result += "&code_challenge=" + code_challenge;
         result += "&code_challenge_method=S256";
@@ -225,8 +225,8 @@
         if(conf.groups_only)
             result += "&groups_only=true"
 
-        let code_verfier :string = push_code_verifier();
-        let code_challenge :string = await get_code_challenge(code_verfier);
+        let code_verfier :string = $session.push_code_verifier();
+        let code_challenge :string = await $session.get_code_challenge(code_verfier);
 
         result += "&code_challenge=" + code_challenge;
         result += "&code_challenge_method=S256";
@@ -243,44 +243,7 @@
         return result;
     }
 
-    function push_code_verifier() :string
-    {
-        let array = new Uint32Array(56/2);
-        window.crypto.getRandomValues(array);
-        let verifier :string;
-        verifier = Array.from(array, (dec) => { return ('0' + dec.toString(16)).substr(-2); }).join('');
-
-        storage.set("_hd_auth_code_verifier", verifier);
-
-        return verifier;
-    }
-
-    async function get_code_challenge(verifier :string) :Promise<string>
-    {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(verifier);
-        
-        let hashed :ArrayBuffer = await window.crypto.subtle.digest('SHA-256', data);
-
-        let challenge = "";
-        let bytes = new Uint8Array(hashed);
-        let len = bytes.byteLength;
-        for (var i = 0; i < len; i++) {
-            challenge += String.fromCharCode(bytes[i]);
-        }
-        return btoa(challenge)
-            .replace(/\+/g, "-")
-            .replace(/\//g, "_")
-            .replace(/=+$/, "");
-    }
-
-    function pop_code_verifier() : string
-    {
-        let verifier :string = "";
-        storage.get("_hd_auth_code_verifier", (v) => {verifier = v; });
-        storage.set("_hd_auth_code_verifier", "");
-        return verifier;
-    }
+    
 
     async function handle_authorization_callback() : Promise<string>
     {
@@ -299,7 +262,7 @@
         data.append("client_id",    conf.client_id);
         data.append("redirect_uri", window.location.origin + "/#/auth/cb");
         data.append("code",         code);
-        data.append("code_verifier", pop_code_verifier());
+        data.append("code_verifier", $session.pop_code_verifier());
         data.append("grant_type",   "authorization_code");
 
         if(conf.tenant)
@@ -323,119 +286,18 @@
             if(res.ok)
             {
                 let tokens = await res.json();
-                
-                // user needs to choose the tenant
-                if(tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1)
+
+                switch($session.useTokensToSignIn(tokens))
                 {
-                    let lastChosenTenantId = $session.lastChosenTenantId;
-
-                    if(conf.tenant || conf.groups_only) 
-                    {
-                        let filteredTenants = []
-                        if(conf.tenant && conf.groups_only)
-                            filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant + '/'))
-                        else if(conf.tenant)
-                            filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant))
-                        else    // conf.groups_only
-                            filteredTenants = tokens.tenants.filter(t => t.id.includes('/'));
-                        
-                        tokens.tenants = [...filteredTenants];
-                        
-                      
-                        if( tokens.tenants.length == 1)
-                        {
-                            if($session.signin(tokens))
-                                return state;
-                            else
-                                return "/#/auth/err?desc=Something+wrong+with+tokens.";   
-                        }
-                    }
-                    
-                    
-                    if(lastChosenTenantId)
-                    {
-                        if(tokens.tenants.some(t => t.id == lastChosenTenantId))       // is last used included 
-                        {
-                            if($session.signin(tokens, lastChosenTenantId))
-                            {
-                                return state;
-                            }
-                            else
-                                return "/#/auth/err?desc=Something+wrong+with+tokens.";
-                        }
-                        else
-                        {
-                            if(conf.let_choose_group_first)
-                            {
-                                // let user choose. user is removed from last used tenant
-                                storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
-                                return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
-                            }
-                            else
-                            {
-                                const firstTenantId = tokens.tenants[0].id;
-                             
-                                if($session.signin(tokens, firstTenantId))
-                                {
-                                    return state;
-                                }
-                                else
-                                    return "/#/auth/err?desc=Something+wrong+with+tokens.";
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // let user choose. It's first time
-                        if(conf.let_choose_group_first)
-                        {
-                            storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
-                            return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
-                        }
-                        else
-                        {
-                            const firstTenantId = tokens.tenants[0].id;
-                            if($session.signin(tokens, firstTenantId))
-                            {
-                                return state;
-                            }
-                            else
-                                return "/#/auth/err?desc=Something+wrong+with+tokens.";
-                        }
-                    }
-                    
-                    /*
-                    if(conf.tenant)
-                    {
-                        
-
-
-                        if(lastChoosenTenantId && !isTenantIncluded(tokens.tenants, lastChoosenTenantId))
-                        {
-                            storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
-                            return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
-                        }
-                        
-                        if($session.signin(tokens, conf.tenant))
-                        {
-                            storage.set('_hd_auth_last_chosen_tenant_id', conf.tenant, true); //$session.configuration.refresh_token_persistent)
-                            return state;
-                        }
-                        else
-                            return "/#/auth/err?desc=Something+wrong+with+tokens.";
-                    }
-                    else
-                    {
-                        storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
-                        return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
-                    }
-                    */
-                }
-
-                if($session.signin(tokens))
+                case Session.SIGNIN_SUCCESS:
                     return state;
-                else
-                    return "/#/auth/err?desc=Something+wrong+with+tokens.";
+
+                case Session.SIGNIN_CHOOSE_TENANT:
+                    return '/#/auth/choose-tenant?redirect=' + encodeURIComponent(state);
+
+                case Session.SIGNIN_FAILED:
+                    return "/#/auth/err?desc=Something+wrong+with+tokens."
+                }
             }
             else
             {

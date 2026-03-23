@@ -95,6 +95,9 @@ export class Session
                 this.configuration.terms_and_conditions_href = cfg.remote.terms_and_conditions_href ?? cfg.remote.termsAndConditionsHRef;    
                 this.configuration.privacy_policy_href       = cfg.remote.privacy_policy_href ?? cfg.remote.privacyPolicyHRef;
                 this.configuration.let_choose_group_first    = cfg.remote.let_choose_group_first ?? cfg.remote.letChooseGroupFirst ?? false; 
+                
+                this.configuration.own_signin                = cfg.remote.own_signin ?? cfg.remote.ownSignin ?? '';
+                this.configuration.own_signup                = cfg.remote.own_signup ?? cfg.remote.ownSignup ?? '';
                 break;
 
             case 'local':
@@ -854,6 +857,139 @@ export class Session
 
         const foundUser = this.configuration.local_users.find(u => u.username == email)
         return foundUser;
+    }
+
+    public static readonly SIGNIN_SUCCESS = 0
+    public static readonly SIGNIN_CHOOSE_TENANT = 1
+    public static readonly SIGNIN_FAILED = 2
+
+    public useTokensToSignIn(tokens)
+    {
+        let conf :Configuration = this.configuration;
+        if(tokens.tenants && Array.isArray(tokens.tenants) && tokens.tenants.length > 1)
+        {
+            let lastChosenTenantId = this.lastChosenTenantId;
+
+            if(conf.tenant || conf.groups_only) 
+            {
+                let filteredTenants = []
+                if(conf.tenant && conf.groups_only)
+                    filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant + '/'))
+                else if(conf.tenant)
+                    filteredTenants = tokens.tenants.filter(t => t.id.startsWith(conf.tenant))
+                else    // conf.groups_only
+                    filteredTenants = tokens.tenants.filter(t => t.id.includes('/'));
+                
+                tokens.tenants = [...filteredTenants];
+                
+                
+                if( tokens.tenants.length == 1)
+                {
+                    if(this.signin(tokens))
+                        return Session.SIGNIN_SUCCESS;
+                    else
+                        return Session.SIGNIN_FAILED;
+                }
+            }
+            
+            
+            if(lastChosenTenantId)
+            {
+                if(tokens.tenants.some(t => t.id == lastChosenTenantId))       // is last used included 
+                {
+                    if(this.signin(tokens, lastChosenTenantId))
+                    {
+                        return Session.SIGNIN_SUCCESS;
+                    }
+                    else
+                        return Session.SIGNIN_FAILED;
+                }
+                else
+                {
+                    if(conf.let_choose_group_first)
+                    {
+                        // let user choose. user is removed from last used tenant
+                        this.storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                        return Session.SIGNIN_CHOOSE_TENANT
+                    }
+                    else
+                    {
+                        const firstTenantId = tokens.tenants[0].id;
+                        
+                        if(this.signin(tokens, firstTenantId))
+                        {
+                            return Session.SIGNIN_SUCCESS;
+                        }
+                        else
+                            return Session.SIGNIN_FAILED;
+                    }
+                }
+            }
+            else
+            {
+                // let user choose. It's first time
+                if(conf.let_choose_group_first)
+                {
+                    this.storage.set("_hd_auth_obtained_tokens_info", JSON.stringify(tokens))
+                    return Session.SIGNIN_CHOOSE_TENANT
+                }
+                else
+                {
+                    const firstTenantId = tokens.tenants[0].id;
+                    if(this.signin(tokens, firstTenantId))
+                    {
+                        return Session.SIGNIN_SUCCESS
+                    }
+                    else
+                        return Session.SIGNIN_FAILED
+                }
+            }
+        }
+
+        if(this.signin(tokens))
+            return Session.SIGNIN_SUCCESS
+        else
+            return Session.SIGNIN_FAILED
+    }
+
+    public push_code_verifier() :string
+    {
+        let array = new Uint32Array(56/2);
+        window.crypto.getRandomValues(array);
+        let verifier :string;
+        verifier = Array.from(array, (dec) => { return ('0' + dec.toString(16)).substr(-2); }).join('');
+
+        this.storage.set("_hd_auth_code_verifier", verifier);
+
+        return verifier;
+    }
+    
+    public async get_code_challenge(verifier :string) :Promise<string>
+    {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(verifier);
+        
+        let hashed :ArrayBuffer = await window.crypto.subtle.digest('SHA-256', data);
+
+        let challenge = "";
+        let bytes = new Uint8Array(hashed);
+        let len = bytes.byteLength;
+        for (var i = 0; i < len; i++) {
+            challenge += String.fromCharCode(bytes[i]);
+        }
+        return btoa(challenge)
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+    }
+    
+    
+    public pop_code_verifier() : string
+    {
+        let verifier :string = "";
+        this.storage.get("_hd_auth_code_verifier", (v) => {verifier = v; });
+        this.storage.set("_hd_auth_code_verifier", "");
+        return verifier;
     }
 
 }

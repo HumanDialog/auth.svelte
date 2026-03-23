@@ -37,4 +37,7 @@ export class Configuration
 
     public terms_and_conditions_href :string = "";
     public privacy_policy_href :string = "";
+
+    public own_signin               :string = ''
+    public own_signup               :string = ''
 }

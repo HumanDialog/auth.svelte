@@ -8,7 +8,7 @@ export { default as Authorized } from "./Authorized.svelte";
 export { default as NotAuthorized } from "./NotAuthorized.svelte";
 
 export { reef, signInHRef, signOutHRef, signUpHRef } from './Auth';
-export { session } from "./Session";
+export { session, Session } from "./Session";
 
 
 
