@@ -9,15 +9,22 @@ let refreshingSemaphore = false;
 
 let fetchHandlers = null
 let fetchHandlersSemaphore = false
+let beforeFetchHandlersPromise = null;
 
 async function callOnBeforeFetchHandlers(resource)
 {
-    if(fetchHandlersSemaphore)
-        return
-
-    fetchHandlersSemaphore = true
-    if(fetchHandlers)
+    if(!fetchHandlers)
     {
+        return;
+    }
+
+    if (beforeFetchHandlersPromise) 
+    {
+        await beforeFetchHandlersPromise;
+        return;
+    }
+    
+    beforeFetchHandlersPromise = (async () => {
         if(fetchHandlers.onBefore && Array.isArray(fetchHandlers.onBefore) && fetchHandlers.onBefore.length > 0)
         {
             let results = []
@@ -27,17 +34,19 @@ async function callOnBeforeFetchHandlers(resource)
 
             await Promise.allSettled(results)
         }
+    })();
+    
+    try {
+        await beforeFetchHandlersPromise;
+    } 
+    finally 
+    {
+        beforeFetchHandlersPromise = null;
     }
-    fetchHandlersSemaphore = false
 }
 
 async function callOnAfterFetchHandlers(res)
 {
-    if(fetchHandlersSemaphore)
-        return
-
-    fetchHandlersSemaphore = true
-
     if(fetchHandlers)
     {
         if(fetchHandlers.onAfter && Array.isArray(fetchHandlers.onAfter) && fetchHandlers.onAfter.length > 0)
@@ -50,17 +59,10 @@ async function callOnAfterFetchHandlers(res)
             await Promise.allSettled(results)
         }
     }
-
-    fetchHandlersSemaphore = false
 }
 
 async function callOnErrorFetchHandlers(res, err)
 {
-    if(fetchHandlersSemaphore)
-        return
-
-    fetchHandlersSemaphore = true
-
     if(fetchHandlers)
     {
         if(fetchHandlers.onError && Array.isArray(fetchHandlers.onError) && fetchHandlers.onError.length > 0)
@@ -73,21 +75,29 @@ async function callOnErrorFetchHandlers(res, err)
             await Promise.allSettled(results)
         }
     }
-
-    fetchHandlersSemaphore = false
 }
 
 export class reef {
-    public static configure(cfg) {
+    public static configure(cfg, myFetchHandlers=null) {
+        
         let _session: Session = get(session);
         _session.configure(cfg);
 
-        if(cfg.fetchHandlers)
-            fetchHandlers = cfg.fetchHandlers
+        if(myFetchHandlers)
+            fetchHandlers = myFetchHandlers
     }
 
     public static async fetch(...args) {
         let [resource, options] = args;
+
+        if ((options == undefined) || (options == null))
+            options = {};
+
+        let run_before_handlers = false
+        if(options.run_before_handlers)
+            run_before_handlers = true
+
+        delete options.run_before_handlers;
 
         let given_url = '';
         given_url = resource;
@@ -114,10 +124,11 @@ export class reef {
             resource = full_path;
         }
 
-        await callOnBeforeFetchHandlers(resource)
+        if(run_before_handlers)
+        {
+            await callOnBeforeFetchHandlers(resource)
+        }
 
-        if ((options == undefined) || (options == null))
-            options = {};
 
         if ((options.headers == undefined) || (options.headers == null))
             options.headers = new Headers();
@@ -177,7 +188,7 @@ export class reef {
             }
             else
             {
-                console.log('auth: setting up x-reef- headers for local developement')
+                //console.log('auth: setting up x-reef- headers for local developement')
                 const user: Local_user = _session.localDevCurrentUser;
                 if (user) 
                 {
@@ -257,7 +268,7 @@ export class reef {
         let path = reef.correct_path_with_api_version_if_needed(_path)
 
         try {
-            let res = await reef.fetch(path, {})
+            let res = await reef.fetch(path, {run_before_handlers: true})
             await callOnAfterFetchHandlers(res)
 
             if (res.ok) {
@@ -295,7 +306,8 @@ export class reef {
         try {
             let res = await reef.fetch(path, {
                 method: 'POST',
-                body: JSON.stringify(request_object)
+                body: JSON.stringify(request_object),
+                run_before_handlers: true
             })
             await callOnAfterFetchHandlers(res)
 
@@ -331,7 +343,7 @@ export class reef {
     public static async delete(_path, onError=undefined) {
         let path = reef.correct_path_with_api_version_if_needed(_path)
         try {
-            let res = await reef.fetch(path, { method: 'DELETE' });
+            let res = await reef.fetch(path, { method: 'DELETE', run_before_handlers: true });
             await callOnAfterFetchHandlers(res)
 
             if (res.ok) {
